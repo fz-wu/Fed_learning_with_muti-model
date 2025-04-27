@@ -1,0 +1,5 @@
+fed_cnn/data/
+.DS_Store
+fed_resnet/models/
+fed_resnet/data/
+.venv/
