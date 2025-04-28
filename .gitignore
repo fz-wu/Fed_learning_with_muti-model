@@ -3,3 +3,5 @@ fed_cnn/data/
 fed_resnet/models/
 fed_resnet/data/
 .venv/
+.env
+__pycache__/

@@ -1,7 +1,7 @@
 import numpy as np
 # Multivariate Linear Regression Model
 class model():
-      
+    
     def __init__( self, data, learning_rate=0.001, iterations=10) :
         self.x = data[0]
         self.y = data[1]
@@ -9,10 +9,9 @@ class model():
         self.w =  np.zeros((self.x.shape[1],1))
         self. b = 0
         self.learning_rate = learning_rate
-          
+
         self.epochs = iterations
-          
-              
+        
     def loss(self):
         cost = np.sum((((self.x.dot(self.w) + self.b) - self.y) ** 2) / (2*len(self.y)))
         return cost
