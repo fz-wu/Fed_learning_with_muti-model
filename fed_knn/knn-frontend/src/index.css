@@ -1,0 +1,47 @@
+:root {
+  /* --primary: rgb(56, 116, 203); */
+  --primary: rgb(177, 237, 74);
+  /* --primary-bg: rgb(16, 18, 20); */
+  --primary-bg: rgb(18, 24, 37);
+  /* --secondary-bg: rgb(22, 24, 27); */
+  --secondary-bg: rgb(28, 35, 49);
+  --canary: rgb(255, 239, 0);
+  --gray: rgb(166, 177, 203);
+
+  --valid-color: rgb(177, 237, 74);
+  --invalid-color: rgb(222, 0, 0);
+
+  --valid-opacity-bg: rgba(30, 222, 0, 0.75);
+  --invalid-opacity-bg: rgba(222, 0, 0, 0.75);
+
+  --border-radius: 5px;
+  --border-width: 1px;
+}
+
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100vh;
+  background-color: var(--primary-bg);
+
+  transition: all 0.5s;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+#root{
+  height: 100%;
+}

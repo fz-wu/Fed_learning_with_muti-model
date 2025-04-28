@@ -11,15 +11,19 @@ import numpy as np
 from torchvision import datasets, transforms
 import torch
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-from utils.sampling import mnist_iid, mnist_noniid, cifar_iid,cifar_noniid
-from utils.options import args_parser
+from fed_cnn.utils.sampling import mnist_iid, mnist_noniid, cifar_iid,cifar_noniid
+from fed_cnn.utils.options import args_parser
 from models.Update import LocalUpdate
 from models.Nets import MLP, CNNMnist, CNNCifar, CNNFemnist, CharLSTM
 from models.Fed import FedWeightAvg
 from models.test import test_img
-from utils.dataset import FEMNIST, ShakeSpeare
-
+from fed_cnn.utils.dataset import FEMNIST, ShakeSpeare
+def cnn_train():
+    pass
 
 if __name__ == '__main__':
 
