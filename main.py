@@ -1,5 +1,6 @@
-from utils import args_parser
-from utils import create_connect
+from utils.options import args_parser
+from utils.net import create_connect, server_listen
+from utils.datasets import load_datasets
 
 from fed_lr.main import lr_train
 from fed_lgr.main import lgr_train
@@ -7,11 +8,17 @@ from fed_kmeans.main import kmeans_train
 from fed_svm.main import svm_train
 from fed_cnn.main import cnn_train
 
+
+import os 
+datasets = os.path.join(os.path.dirname('fed_lr'), 'traindata.csv')
+print(datasets)
 def client_train():
     print(args_parser())
     args = args_parser()
     if args.model == 'lr':
-        lr_train()
+        datasets= '/Users/fafa/Documents/code/python/fedlearning/fed_lr/traindata.csv'
+        X, Y = load_datasets(datasets)
+        lr_train(X, Y)
     elif args.model == 'lgr':
         lgr_train()
     elif args.model == 'k-means':
@@ -27,7 +34,7 @@ if __name__ == "__main__":
         # Start the server
         print("Starting listening server...")
         # server()
-        create_connect(5, 10000)
+        create_connect(5,10000)
     elif args.role == 'client':
         # Start the client
         print("Starting client...")

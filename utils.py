@@ -3,30 +3,37 @@ import os
 import argparse
 import threading
 import time  
+import pandas as pd
+
+def load_datasets(dataset, data_dir):
+    df_train = pd.read_csv(os.path.join(data_dir, dataset))
+    X = df_train.iloc[:,:-1].values
+    Y = df_train.iloc[:,-1:].values
+    return X, Y
 
 def tcplink(sock, addr):
     print('Accept new connection from {}'.format(addr))
-    sock.send(b'Welcome!')
     while True:
         data = sock.recv(1024)
         time.sleep(1)
         if not data or data.decode('utf-8') == 'exit':
             break
         sock.send(('Hello, %s!' % data.decode('utf-8')).encode('utf-8'))
-    sock.close()
+    # sock.close()
     print('Connection from %s:%s closed.' % addr)
 
 def create_connect(client_num, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(("0.0.0.0", port))
-    sock.listen(client_num)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind(("0.0.0.0", port))
+    server_socket.listen(client_num)
     print('Waiting for connection...')
     while True:
         # 接受一个新连接:
-        new_sock, addr = sock.accept()
-        
+        client_socket, client_addr = server_socket.accept()
+        print("client_socket: {}, addr: {}".format(client_socket, addr))
         # 创建新线程来处理TCP连接:
-        t = threading.Thread(target=tcplink, args=(new_sock, addr))
+        t = threading.Thread(target=tcplink, args=(client_socket, addr))
         t.start()
 
 def send_weights(target_host, port, weights):
@@ -41,34 +48,10 @@ def send_weights(target_host, port, weights):
     sock.sendall(serialized_weights)
 
     # Close the socket
-    sock.close()
+    # sock.close()
 
 
-def receive_weights(remote_host, port, weights):
-    # Create a socket connection
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind((host, port))
-    sock.listen(1)
 
-    # Wait for a connection
-    conn, addr = sock.accept()
-
-    # Receive the serialized weights
-    serialized_weights = b""
-    while True:
-        data = conn.recv(4096)
-        if not data:
-            break
-        serialized_weights += data
-
-    # Deserialize the weights using pickle
-    weights = pickle.loads(serialized_weights)
-
-    # Close the connection and socket
-    conn.close()
-    sock.close()
-
-    return weights
 
 def args_parser():
     parser = argparse.ArgumentParser()

@@ -1,6 +1,6 @@
 import numpy as np
 # Multivariate Linear Regression Model
-class model():
+class Model():
     
     def __init__( self, data, learning_rate=0.001, iterations=10) :
         self.x = data[0]
