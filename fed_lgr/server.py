@@ -3,7 +3,7 @@ import numpy as np
 from model import LogisticRegressionModel
 from client_interface import ClientInterface
 
-class Guest(ClientInterface):
+class Server(ClientInterface):
     """
     Implementation of the active party (Guest) in a federated learning system.
     """

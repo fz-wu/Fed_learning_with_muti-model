@@ -1,9 +1,9 @@
 from utils.options import args_parser
-from utils.net import create_connect, server_listen
+from utils.net import create_connect
 from utils.datasets import load_datasets
 
-from fed_lr.main import lr_train
-from fed_lgr.main import lgr_train
+from fed_lr.train import lr_train
+# from fed_lgr.main import lgr_train
 from fed_kmeans.main import kmeans_train    
 from fed_svm.main import svm_train
 from fed_cnn.main import cnn_train
@@ -34,7 +34,8 @@ if __name__ == "__main__":
         # Start the server
         print("Starting listening server...")
         # server()
-        create_connect(5,10000)
+        create_connect(2,10000)
+
     elif args.role == 'client':
         # Start the client
         print("Starting client...")

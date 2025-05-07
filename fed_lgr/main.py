@@ -5,9 +5,9 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-from guest import Guest
+from server import Server
 from model import LogisticRegressionModel
-from host import Host
+from client import Host
 import heart_disease_dataset as hdd
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report,f1_score,accuracy_score
@@ -28,9 +28,9 @@ def lgr_train():
     N = x1.shape[0]
     num_batch = N // BATCH_SIZE
     
-    guest = Guest(0.0001, LogisticRegressionModel, data=(x1, y))
-    host1 = Host(0.0001, LogisticRegressionModel, data=x2)
-    host2 = Host(0.0001, LogisticRegressionModel, data=x3)
+    server = Server(0.0001, LogisticRegressionModel, data=(x1, y))
+    client1 = Host(0.0001, LogisticRegressionModel, data=x2)
+    client2 = Host(0.0001, LogisticRegressionModel, data=x3)
 
     loss_per_epoch = []
 
@@ -39,41 +39,41 @@ def lgr_train():
         losses = []
         for _ in range(num_batch):
             ids = generate_batch_ids(N, N, BATCH_SIZE, seen_samples)
-            guest.forward(ids)
-            host1.forward(ids)
-            host2.forward(ids)
+            server.forward(ids)
+            client1.forward(ids)
+            client2.forward(ids)
 
-            guest.receive(host1.send(), host2.send())
-            guest.compute_gradient()
+            server.receive(client1.send(), client2.send())
+            server.compute_gradient()
 
-            diff = guest.send()
-            host1.receive(diff)
-            host2.receive(diff)
+            diff = server.send()
+            client1.receive(diff)
+            client2.receive(diff)
 
-            host1.compute_gradient()
-            host2.compute_gradient()
-            guest.update_model()
-            host1.update_model()
-            host2.update_model()
+            client1.compute_gradient()
+            client2.compute_gradient()
+            server.update_model()
+            client1.update_model()
+            client2.update_model()
 
-            losses.append(guest.loss)
+            losses.append(server.loss)
         
         epoch_loss = sum(losses) / len(losses) if losses else 0
         loss_per_epoch.append(epoch_loss)
 
     x1_test,x2_test,x3_test = hdd.get_testdata()
     
-    predictions_local = guest.predict_local(x1_test)
-    print("Local Model Accuracy of Guest: ",accuracy_score(hdd.get_testlabels(),predictions_local))
-    print("Local Model F1 Score of Guest: ",f1_score(hdd.get_testlabels(),predictions_local))
+    predictions_local = server.predict_local(x1_test)
+    print("Local Model Accuracy of server: ",accuracy_score(hdd.get_testlabels(),predictions_local))
+    print("Local Model F1 Score of server: ",f1_score(hdd.get_testlabels(),predictions_local))
     print("Local Report",classification_report(hdd.get_testlabels(),predictions_local))
 
-    # The guest receives the contributions and makes the final prediction
-    host1_contribution = host1.compute_contribution(x2_test)
-    host2_contribution = host2.compute_contribution(x3_test)
-    predictions = guest.predict(x1_test, [host1_contribution, host2_contribution])
-    print("Federated Model Accuracy of Guest: ",accuracy_score(hdd.get_testlabels(),predictions))
-    print("Federated Model F1 Score of Guest: ",f1_score(hdd.get_testlabels(),predictions))
+    # The server receives the contributions and makes the final prediction
+    client1_contribution = client1.compute_contribution(x2_test)
+    client2_contribution = client2.compute_contribution(x3_test)
+    predictions = server.predict(x1_test, [client1_contribution, client2_contribution])
+    print("Federated Model Accuracy of server: ",accuracy_score(hdd.get_testlabels(),predictions))
+    print("Federated Model F1 Score of server: ",f1_score(hdd.get_testlabels(),predictions))
     print("Federated Report",classification_report(hdd.get_testlabels(),predictions))
 
 
