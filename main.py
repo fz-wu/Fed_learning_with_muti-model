@@ -1,5 +1,5 @@
 from utils.options import args_parser
-from utils.net import create_connect
+from utils.net2 import create_connect
 from utils.datasets import load_datasets
 
 from fed_lr.train import lr_train

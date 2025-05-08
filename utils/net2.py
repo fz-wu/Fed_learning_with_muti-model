@@ -61,26 +61,23 @@ def create_connect(client_num, port):
         client_socket, client_addr = server_socket.accept()
         client_sockets.append(client_socket)
         print("client_addr: {}".format(client_addr))
-        t = threading.Thread(target=tcplink, args=(client_socket, client_addr, client_id_counter, client_num))
-        threads.append(t)
-        t.start()
-        print("Thread started for client: {}".format(client_addr))
-        client_id_counter += 1
 
     for round in range(NUM_ROUNDS):
         print(f"Starting aggregation round {round + 1}...")
-        all_clients_connected_event.wait()
-        all_clients_connected_event.clear()
 
         print("All clients connected. Starting aggregation...")
-        print("client_weights:{}".format(client_weights))
-        aggregated_weights = aggregate_weights(client_weights)
+        # 接收所有权重
+        recved_weights = []
+        for client_socket in client_sockets:
+            serialized_clinet_weight = client_socket.recv(10240)
+            client_weight = pickle.loads(serialized_clinet_weight)
+            print("Received weight from client {}: {}".format(client_socket.getpeername(),client_weights))
+            recved_weights.append(client_weight) # 等待客户端发送权重
+
+        print("recved_client_weights:{}".format(recved_weights))
+        aggregated_weights = aggregate_weights(recved_weights)
         print("Aggregated weights:", aggregated_weights)
 
-        with client_lock:
-            client_weights_copy = client_weights[:]
-            client_weights = []
-            client_count = 0
 
         # 发送聚合后的权重到所有客户端
         for client_socket in client_sockets:
