@@ -34,7 +34,7 @@ if __name__ == "__main__":
         # Start the server
         print("Starting listening server...")
         # server()
-        create_connect(2,10000)
+        create_connect(1,10000)
 
     elif args.role == 'client':
         # Start the client
