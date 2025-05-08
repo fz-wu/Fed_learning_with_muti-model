@@ -2,49 +2,16 @@ import socket
 import threading
 import pickle
 import numpy as np
-
+from time import sleep
+from utils.options import args_parser
 # 全局变量
+args = args_parser()
 client_weights = []
 client_sockets = []  # 存储所有客户端socket
 client_count = 0
 client_lock = threading.Lock()
 all_clients_connected_event = threading.Event()
-NUM_ROUNDS = 10  # 联邦学习迭代轮数
-
-def tcplink(sock, addr, client_id, client_num):
-    global client_weights, client_count
-
-    print('Accept new connection from {}'.format(addr))
-    try:
-        for round in range(NUM_ROUNDS):
-            # 1. 接收客户端发送的参数
-            weight = sock.recv(10240)
-            if not weight:
-                print(f"Client {client_id} disconnected.")
-                break
-            weight = pickle.loads(weight)
-            print(f"Round {round+1}: Received weight from {addr}: {type(weight)}")
-
-            with client_lock:
-                client_weights.append(weight)
-                client_count += 1
-                if client_count == client_num:
-                    print("All clients connected. Proceeding to aggregation.")
-                    all_clients_connected_event.set()
-
-            # 等待主线程聚合并发送新权重
-            agg_weight = sock.recv(10240)
-            if not agg_weight:
-                print(f"Client {client_id} disconnected after aggregation.")
-                break
-            agg_weight = pickle.loads(agg_weight)
-            print(f"Round {round+1}: Client {client_id} received new weights.")
-
-    except Exception as e:
-        print("Error in tcplink:", e)
-    finally:
-        sock.close()
-        print('Connection from %s:%s closed.' % addr)
+NUM_ROUNDS =  args.round # 联邦学习迭代轮数
 
 def create_connect(client_num, port):
     global client_weights, client_count, all_clients_connected_event, client_sockets
@@ -64,7 +31,7 @@ def create_connect(client_num, port):
 
     for round in range(NUM_ROUNDS):
         print(f"Starting aggregation round {round + 1}...")
-
+        sleep(1)
         print("All clients connected. Starting aggregation...")
         # 接收所有权重
         recved_weights = []
@@ -78,7 +45,6 @@ def create_connect(client_num, port):
         aggregated_weights = aggregate_weights(recved_weights)
         print("Aggregated weights:", aggregated_weights)
 
-
         # 发送聚合后的权重到所有客户端
         for client_socket in client_sockets:
             try:
@@ -89,12 +55,13 @@ def create_connect(client_num, port):
                 print("Error sending weights to client:", e)
 
         print("Weights sent to all clients. Ready for the next round.")
+    print("All rounds completed. Closing server socket.")
 
 def aggregate_weights(weights):
     """
     简单平均聚合
     """
-    print("wait weights:{}".format(weights))
+    # print("wait weights:{}".format(weights))
     total_W = np.zeros_like(weights[0][0])
     total_b = 0
     for W, b in weights:

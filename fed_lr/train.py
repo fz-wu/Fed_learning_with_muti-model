@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, accuracy_score
 from dotenv import find_dotenv, load_dotenv
 import socket
 
@@ -8,12 +8,12 @@ import os
 import sys
 
 from utils.net import send_weights
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+from utils.options import args_parser
+args = args_parser()
 
 # from client import Participant
 # from server import server
-import dataset as dd
+# import  dataset as dd
 import pickle
 
 
@@ -65,7 +65,7 @@ def predict(X,theta):
     return np.dot(X,theta[0]) + theta[1]
 
 def lr_train(X, Y):
-    round = 10
+    round = args.round
         # load env 
     load_dotenv(verbose=True)
     print(os.getenv("ip_client1",default=None))
@@ -98,10 +98,10 @@ def lr_train(X, Y):
         weights = client_socket.recv(10240)
         theta = pickle.loads(weights)
         print("new_theta:{}".format(new_theta))
+        # X_test, y_test =dd.get_testdata()
+        # y_pred = predict(X_test, theta)  # Can be used to predict the testdata
+        # print("Acc: {}".format(r2_score(y_test,y_pred)))
+
         # model.train()
         # print("train_theta:{}".format(theta[0]))
     client_socket.close()
-    # theta  = model.fit(theta)  # 训练模型
-    # print("train_theta:{}".format(theta))
-    # new_weight = send_weights(weights=theta, target_host="127.0.0.1", port=10000) # 发送模型参数到客户端
-    # print("new_weight:{}".format(new_weight))

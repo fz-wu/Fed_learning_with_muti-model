@@ -5,6 +5,7 @@ description = "A collection of federated learning algorithms"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "django==4.2",
     "flwr>=1.18.0",
     "matplotlib>=2.2.5",
     "numpy>=1.12.1",

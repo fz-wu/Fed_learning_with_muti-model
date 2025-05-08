@@ -1,6 +1,6 @@
 from utils.options import args_parser
 from utils.net2 import create_connect
-from utils.datasets import load_datasets
+from utils.datasets import load_datasets, get_dataset
 
 from fed_lr.train import lr_train
 # from fed_lgr.main import lgr_train
@@ -16,7 +16,7 @@ def client_train():
     print(args_parser())
     args = args_parser()
     if args.model == 'lr':
-        datasets= '/Users/fafa/Documents/code/python/fedlearning/fed_lr/traindata.csv'
+        datasets = get_dataset()
         X, Y = load_datasets(datasets)
         lr_train(X, Y)
     elif args.model == 'lgr':
@@ -33,8 +33,8 @@ if __name__ == "__main__":
     if args.role == 'server':
         # Start the server
         print("Starting listening server...")
-        # server()
-        create_connect(1,10000)
+        # server() 10000 is the port number
+        create_connect(args.client_num,10000)
 
     elif args.role == 'client':
         # Start the client
