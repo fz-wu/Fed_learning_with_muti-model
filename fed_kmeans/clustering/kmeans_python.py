@@ -381,7 +381,7 @@ def test_federated(unbalanced=True):
 
     print(kmeans.predict(np.array([[0, 0], [1.2, 0.3]])))
     print(kmeans.cluster_centers_)
-    pickle.dump(kmeans.cluster_centers_, open("fed_kmeans.pkl", "wb"))
+    # pickle.dump(kmeans.cluster_centers_, open("fed_kmeans.pkl", "wb"))
 if __name__ == "__main__":
     # test_kmeans_python()
     test_federated(

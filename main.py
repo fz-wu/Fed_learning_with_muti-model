@@ -4,7 +4,7 @@ from utils.datasets import load_datasets, get_dataset
 
 from fed_lr.train import lr_train
 # from fed_lgr.main import lgr_train
-from fed_kmeans.main import kmeans_train    
+from fed_kmeans.kmeans_train import kmeans_train    
 from fed_svm.main import svm_train
 from fed_cnn.main import cnn_train
 
@@ -21,7 +21,8 @@ def client_train():
         lr_train(X, Y)
     elif args.model == 'lgr':
         lgr_train()
-    elif args.model == 'k-means':
+    elif args.model == 'kmeans':
+        print("kmeans")
         kmeans_train()
     elif args.model == 'svm':
         svm_train()

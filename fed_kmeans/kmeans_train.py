@@ -1,7 +1,12 @@
 from sklearn.cluster import KMeans, MiniBatchKMeans
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+# 数据标准化
+from sklearn.preprocessing import StandardScaler
+
 import numpy as np
 import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
+
 from utils.datasets import load_datasets, get_dataset
 
 def init_kmeans_sklearn(n_clusters, batch_size, seed, init_centroids='random'):
@@ -46,10 +51,25 @@ def test_sk():
     print(kmeans.cluster_centers_)
 
 
-def test_train():
-    datasets = get_dataset()
-    X, Y = load_datasets(datasets)
-    kmeans = KMeans(n_clusters=3, random_state=1).fit(X)
+def kmeans_train():
+    iris = load_iris()
+    x_train,x_test,y_train,y_test = train_test_split(iris.data, iris.target,test_size=0.2)
+    transfer = StandardScaler()
+    x_train = transfer.fit_transform(x_train)
+    x_test = transfer.transform(x_test)
+    kmeans = KMeans(n_clusters=3, random_state=1).fit(x_train)
+    print(x_train.shape)
+    print(kmeans.labels_)
+    for i in y_train:
+        if i == 0:
+            i = 1
+        elif i == 1:
+            i = 0
+            
+    print(y_train)
+    # print(kmeans.predict([[0, 0], [12, 3]]))
+    # print(kmeans.cluster_centers_)
+
 if __name__ == "__main__":
     # test_sk()
     test_train()
