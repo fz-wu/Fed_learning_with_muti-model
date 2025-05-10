@@ -6,3 +6,4 @@ fed_resnet/data/
 .env
 __pycache__/
 fed_knn/datasets/
+datasets

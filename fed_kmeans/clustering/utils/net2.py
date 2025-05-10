@@ -36,10 +36,7 @@ def create_connect(client_num, port):
         # 接收所有权重
         recved_weights = []
         for client_socket in client_sockets:
-            serialized_clinet_weight = client_socket.recv(102400)
-            if not serialized_clinet_weight:
-                print("Warning: received empty data from client", client_socket.getpeername())
-                continue
+            serialized_clinet_weight = client_socket.recv(10240)
             client_weight = pickle.loads(serialized_clinet_weight)
             print("Received weight from client {}: {}".format(client_socket.getpeername(),client_weights))
             recved_weights.append(client_weight) # 等待客户端发送权重
@@ -79,7 +76,7 @@ def send_weights(target_host, port, weights):
     sock.connect((target_host, port))
     serialized_weights = pickle.dumps(weights)
     sock.sendall(serialized_weights)
-    new_weight = sock.recv(102400)
+    new_weight = sock.recv(10240)
     new_weight = pickle.loads(new_weight)
     print("client_weight:{}".format(new_weight))
     # sock.close()

@@ -1,8 +1,8 @@
 from sklearn.cluster import KMeans, MiniBatchKMeans
 import numpy as np
 import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
-from utils.datasets import load_datasets, get_dataset
+
+from utils.datasets import load_datasets, get_dataset_path
 
 def init_kmeans_sklearn(n_clusters, batch_size, seed, init_centroids='random'):
     # init kmeans

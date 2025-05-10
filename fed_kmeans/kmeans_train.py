@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 import sys, os
 
-from utils.datasets import load_datasets, get_dataset
+# from utils.datasets import load_datasets, get_dataset_path
 
 def init_kmeans_sklearn(n_clusters, batch_size, seed, init_centroids='random'):
     # init kmeans
@@ -65,7 +65,7 @@ def kmeans_train():
             i = 1
         elif i == 1:
             i = 0
-            
+
     print(y_train)
     # print(kmeans.predict([[0, 0], [12, 3]]))
     # print(kmeans.cluster_centers_)

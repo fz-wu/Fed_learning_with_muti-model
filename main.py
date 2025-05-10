@@ -1,8 +1,8 @@
 from utils.options import args_parser
 from utils.net2 import create_connect
-from utils.datasets import load_datasets, get_dataset
 
 from fed_lr.train import lr_train
+# from fed_svm.train import svm_train
 # from fed_lgr.main import lgr_train
 from fed_kmeans.kmeans_train import kmeans_train    
 from fed_svm.main import svm_train
@@ -16,9 +16,7 @@ def client_train():
     print(args_parser())
     args = args_parser()
     if args.model == 'lr':
-        datasets = get_dataset()
-        X, Y = load_datasets(datasets)
-        lr_train(X, Y)
+        lr_train()
     elif args.model == 'lgr':
         lgr_train()
     elif args.model == 'kmeans':
@@ -35,7 +33,7 @@ if __name__ == "__main__":
         # Start the server
         print("Starting listening server...")
         # server() 10000 is the port number
-        create_connect(args.client_num,10000)
+        create_connect(args.client_num,args.port)
 
     elif args.role == 'client':
         # Start the client

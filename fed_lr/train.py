@@ -6,7 +6,7 @@ import socket
 
 import os
 import sys
-
+from utils.datasets import load_datasets, get_dataset_path
 from utils.net import send_weights
 from utils.options import args_parser
 args = args_parser()
@@ -64,11 +64,15 @@ class Model():
 def predict(X,theta):
     return np.dot(X,theta[0]) + theta[1]
 
-def lr_train(X, Y):
+def lr_train():
+    args = args_parser()
+
+    datasets_path = get_dataset_path()
+    X, Y = load_datasets(datasets_path)
     round = args.round
         # load env 
-    load_dotenv(verbose=True)
-    print(os.getenv("ip_client1",default=None))
+    # load_dotenv(verbose=True)
+    # print(os.getenv("ip_client1",default=None))
     # Create client instances
 
     M, N = X.shape
@@ -77,7 +81,7 @@ def lr_train(X, Y):
     # S = server(initial_global_model)
     model = Model(data=(X, Y), learning_rate=0.001, iterations=10) # 读数据加载模型
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect(('127.0.0.1',10000))
+    client_socket.connect((args.server_ip,args.port))
 
     for _ in range(round):
         print("round:{}".format(_))

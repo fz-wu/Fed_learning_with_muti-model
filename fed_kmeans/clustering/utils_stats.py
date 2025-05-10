@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import metrics
 
-project_dir = os.path.dirname(os.getcwd())
+project_dir = os.path.join(os.path.dirname(os.getcwd()), "fed_kmeans", "clustering")
 
 
 def davies_bouldin(x, labels, centroids, verbose=False):
@@ -96,6 +96,8 @@ def plot_stats(stats, x_variable, x_variable_name, metric_name):
     plt.legend()
     fig_path = os.path.join(project_dir, "results")
     plt.savefig(os.path.join(fig_path, "stats_{}.png".format(x_variable_name)), dpi=600, bbox_inches='tight')
+    # plt.savefig(os.path.join(fig_path, "stats_1.png"), dpi=600, bbox_inches='tight')
+
     plt.show()
 
 
