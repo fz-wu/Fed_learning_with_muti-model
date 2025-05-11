@@ -1,13 +1,12 @@
 from utils.options import args_parser
-from utils.net2 import create_connect
+from utils.net2 import create_connect, create_lgr_connect
 
 from fed_lr.train import lr_train
 # from fed_svm.train import svm_train
-# from fed_lgr.main import lgr_train
+from fed_lgr.train import lgr_train
 from fed_kmeans.kmeans_train import kmeans_train    
 from fed_svm.main import svm_train
 from fed_cnn.main import cnn_train
-
 
 import os 
 datasets = os.path.join(os.path.dirname('fed_lr'), 'traindata.csv')
@@ -33,7 +32,10 @@ if __name__ == "__main__":
         # Start the server
         print("Starting listening server...")
         # server() 10000 is the port number
-        create_connect(args.client_num,args.port)
+        if args.model == 'lr':
+            create_connect(args.client_num, args.port)
+        elif args.model == 'lgr':
+            create_lgr_connect(args.client_num, args.port, args.round)
 
     elif args.role == 'client':
         # Start the client

@@ -5,7 +5,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, f1_score
 
 # Load the dataset
-file_path = "C:/Users/P70077043/Documents/Contribution_in_VFL/new_experiment/heart_disease.csv"
+file_path = "../datasets/heart_disease.csv"
 df = pd.read_csv(file_path)
 
 X = df.drop('output', axis=1)

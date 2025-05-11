@@ -1,7 +1,7 @@
 from typing import List, Tuple
 import numpy as np
-from model import LogisticRegressionModel
-from client_interface import ClientInterface
+from fed_lgr.model import LogisticRegressionModel
+from fed_lgr.client_interface import ClientInterface
 
 class Host(ClientInterface):
     """

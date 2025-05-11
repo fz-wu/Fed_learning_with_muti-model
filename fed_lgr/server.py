@@ -1,7 +1,8 @@
 from typing import Tuple, List
 import numpy as np
-from model import LogisticRegressionModel
-from client_interface import ClientInterface
+from fed_lgr.model import LogisticRegressionModel
+from fed_lgr.client_interface import ClientInterface
+import pandas as pd
 
 class Server(ClientInterface):
     """
@@ -18,7 +19,7 @@ class Server(ClientInterface):
         """
         self.lr = lr
         self.x, self.y = data
-        self.y = self.y.reset_index(drop=True) 
+        self.y = pd.Series(self.y.ravel()).reset_index(drop=True)
         self.model = model_instance(self.x, self.lr)
         self.z = None
         self.diff = None
@@ -52,9 +53,20 @@ class Server(ClientInterface):
         """Sends computed diff to other parties."""
         return self.diff
 
+    # def update_model(self):
+    #     """Updates the model parameters and computes the loss."""
+    #     self.loss = self.model.update_model_(self.y_)
     def update_model(self):
-        """Updates the model parameters and computes the loss."""
         self.loss = self.model.update_model_(self.y_)
+
+        # 自动保存模型参数
+        import os
+        checkpoint_dir = os.path.join(os.path.dirname(__file__), 'checkpoints')
+        os.makedirs(checkpoint_dir, exist_ok=True)
+
+        import numpy as np
+        np.save(os.path.join(checkpoint_dir, 'guest_weights.npy'), self.model.w)
+        np.save(os.path.join(checkpoint_dir, 'guest_bias.npy'), self.model.b)
 
     def predict(self, X_guest, host_contributions):
         # X_guest is the input features available to the Guest
@@ -70,5 +82,4 @@ class Server(ClientInterface):
         z_guest = np.dot(X_guest, self.model.w) + self.model.b
         prob = self.model.sigmoid(z_guest)
         predictions = [1 if p >= 0.5 else 0 for p in prob]
-        return predictions   
-        
+        return predictions

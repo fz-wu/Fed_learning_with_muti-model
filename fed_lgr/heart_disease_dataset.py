@@ -1,9 +1,11 @@
 #This script is used to split the dataset into three partitions vertically
 import sklearn
+import os
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-df = pd.read_csv('heart_disease.csv')
+base_dir = os.path.dirname(os.path.abspath(__file__))
+df = pd.read_csv(os.path.join(base_dir, 'heart_disease.csv'))
 
 
 y = df["output"]
