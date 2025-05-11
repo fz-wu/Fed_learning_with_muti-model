@@ -3,10 +3,13 @@ from utils.net2 import create_connect, create_lgr_connect
 
 from fed_lr.train import lr_train
 # from fed_svm.train import svm_train
+# from fed_lgr.main import lgr_train
+from fed_kmeans.kmeans_train import kmeans_train
+from fed_kmeans.clustering.kmeans_python import  fed_kmeans, test_federated
 from fed_lgr.train import lgr_train
-from fed_kmeans.kmeans_train import kmeans_train    
 from fed_svm.main import svm_train
 from fed_cnn.main import cnn_train
+
 
 import os 
 datasets = os.path.join(os.path.dirname('fed_lr'), 'traindata.csv')
@@ -20,7 +23,9 @@ def client_train():
         lgr_train()
     elif args.model == 'kmeans':
         print("kmeans")
-        kmeans_train()
+        # kmeans_train()
+        fed_kmeans()
+        # test_federated()
     elif args.model == 'svm':
         svm_train()
     elif args.model == 'cnn':

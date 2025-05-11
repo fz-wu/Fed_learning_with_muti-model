@@ -1,6 +1,7 @@
 import numpy as np
 import random
-from utils_stats import plot_progress
+# from utils_stats import plot_progress
+from utils.datasets import load_datasets, get_dataset_path
 import pickle
 
 def randomly_init_centroid(min_value, max_value, n_dims, repeats=1):
@@ -8,6 +9,46 @@ def randomly_init_centroid(min_value, max_value, n_dims, repeats=1):
         return min_value + (max_value - min_value) * np.random.rand(n_dims)
     else:
         return min_value + (max_value - min_value) * np.random.rand(repeats, n_dims)
+
+def plot_progress(progress_means, progress_stds, record_at):
+    #  NOTE: only for dummy data
+    # print(len(progress_means), progress_means[0].shape)
+    # print(len(progress_stds), progress_stds[0].shape)
+    num_clusters = progress_means[0].shape[0]
+    num_records = len(progress_means)
+    true_means = np.arange(1, num_clusters+1)
+    fig = plt.figure()
+    for i in range(num_clusters):
+        ax = fig.add_subplot(1, 1, 1)
+        x_axis = np.array(range(num_records))
+        true_means_i = np.repeat(true_means[i], num_records)
+        means = np.array([x[i] for x in progress_means])
+        stds = np.array([x[i] for x in progress_stds])
+        ax.plot(means, 'r-', label='centroid mean')
+        ax.plot(true_means_i, 'b-', label='true mean')
+        ax.fill_between(
+            x_axis,
+            means - stds,
+            means + stds,
+            facecolor='r',
+            alpha=0.4,
+            label='centroid std',
+        )
+        # ax.fill_between(
+        #     x_axis,
+        #     true_means_i - 0.1,
+        #     true_means_i + 0.1,
+        #     facecolor='b',
+        #     alpha=0.1,
+        #     label='true std',
+        # )
+        plt.xticks(x_axis, record_at)
+    plt.xlabel("Round")
+    plt.ylabel("Cluster distribution")
+    # plt.legend()
+    fig_path = os.path.join(project_dir, "results")
+    plt.savefig(os.path.join(fig_path, "stats_{}.png".format("progress")), dpi=600, bbox_inches='tight')
+    plt.show()
 
 
 class KMeans:
@@ -243,8 +284,10 @@ class KMeansFederated(KMeans):
 
     def fit(self, X, record_at=None):
         x = X
+        print(x)
+        print(type(x))
         self.num_clients = len(x)
-        self.n_dims = x[0].shape[1]
+        self.n_dims = x.shape[1]
         clients_per_round = max(1, int(self.sample_fraction * self.num_clients))
         centroids = self.do_init_centroids()
 
@@ -257,7 +300,7 @@ class KMeansFederated(KMeans):
 
         # while changed and round < self.max_iter:
         for iteration in range(1, 1+self.max_iter):
-            clients_in_round = random.sample(x, clients_per_round)
+            clients_in_round = random.sample(list(x), clients_per_round)
             if self.verbose:
                 print("round: {}".format(iteration))
 
@@ -365,6 +408,7 @@ def test_federated(unbalanced=True):
             np.array([[1.0, 0.0]])
         ]
         # x = [np.array([[0.1, 0.2], [0.1, 0.4], [0.1, 0.6], [1.0, 0.2], [1.0, 0.1], [1.0, 0.0]])]
+    print(x.shape)
     print([d.shape for d in x])
 
     kmeans = KMeansFederated(
@@ -382,8 +426,26 @@ def test_federated(unbalanced=True):
     print(kmeans.predict(np.array([[0, 0], [1.2, 0.3]])))
     print(kmeans.cluster_centers_)
     # pickle.dump(kmeans.cluster_centers_, open("fed_kmeans.pkl", "wb"))
+def fed_kmeans():
+    datasets = get_dataset_path()
+    X, Y = load_datasets(datasets)
+    kmeans = KMeansFederated(
+        n_clusters=3,
+        sample_fraction=0,
+        verbose=True,
+        learning_rate=5,
+        adaptive_lr=0.1,
+        max_iter=100,
+        # momentum=0.8,
+    )
+    print(X.shape)
+    centroids, overall_counts = kmeans.fit(X=X)
+
+    print(kmeans.predict(np.array([[0, 0], [1.2, 0.3]])))
+    print(kmeans.cluster_centers_)    
 if __name__ == "__main__":
     # test_kmeans_python()
-    test_federated(
-        unbalanced=False
-    )
+    # test_federated(
+    #     unbalanced=False
+    # )
+    fed_kmeans()

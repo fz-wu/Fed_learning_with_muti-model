@@ -14,5 +14,5 @@ def get_dataset_path():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     datasets_path = os.path.join(base_dir, '../datasets/', args.dataset)
     datasets_path = os.path.abspath(datasets_path)
-    print(datasets_path)
+    # print(datasets_path)
     return datasets_path

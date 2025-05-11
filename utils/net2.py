@@ -25,8 +25,6 @@ def create_connect(client_num, port):
     print("client number = {}".format(client_num))
     print('Waiting for connection...')
 
-    threads = []
-    client_id_counter = 0
     for _ in range(client_num):
         client_socket, client_addr = server_socket.accept()
         client_sockets.append(client_socket)
