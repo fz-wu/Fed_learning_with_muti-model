@@ -16,7 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-
+from .views import run_federated
 urlpatterns = [
+    path('run_federated/', run_federated, name='run_federated'),
     path('admin/', admin.site.urls),
 ]

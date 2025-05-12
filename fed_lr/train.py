@@ -6,7 +6,7 @@ import socket
 
 import os
 import sys
-from utils.datasets import load_datasets, get_dataset_path
+from utils.datasets import load_datasets, get_dataset_path, save_model_weights
 from utils.net import send_weights
 from utils.options import args_parser
 args = args_parser()
@@ -79,7 +79,7 @@ def lr_train():
     theta = (np.zeros((N,1)),0)
     # Create server instance
     # S = server(initial_global_model)
-    model = Model(data=(X, Y), learning_rate=0.001, iterations=10) # 读数据加载模型
+    model = Model(data=(X, Y), learning_rate=args.lr, iterations=10) # 读数据加载模型
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((args.server_ip,args.port))
 
@@ -108,4 +108,6 @@ def lr_train():
 
         # model.train()
         # print("train_theta:{}".format(theta[0]))
+    # theta 
+    save_model_weights(theta)
     client_socket.close()

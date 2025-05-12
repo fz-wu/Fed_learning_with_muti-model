@@ -15,7 +15,7 @@ import os
 datasets = os.path.join(os.path.dirname('fed_lr'), 'traindata.csv')
 print(datasets)
 def client_train():
-    print(args_parser())
+    # print(args_parser())
     args = args_parser()
     if args.model == 'lr':
         lr_train()
@@ -23,8 +23,8 @@ def client_train():
         lgr_train()
     elif args.model == 'kmeans':
         print("kmeans")
-        # kmeans_train()
-        fed_kmeans()
+        kmeans_train()
+        # fed_kmeans()
         # test_federated()
     elif args.model == 'svm':
         svm_train()

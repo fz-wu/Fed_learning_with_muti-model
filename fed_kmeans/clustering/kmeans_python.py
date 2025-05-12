@@ -1,5 +1,8 @@
 import numpy as np
 import random
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
 # from utils_stats import plot_progress
 from utils.datasets import load_datasets, get_dataset_path
 import pickle
@@ -284,10 +287,10 @@ class KMeansFederated(KMeans):
 
     def fit(self, X, record_at=None):
         x = X
-        print(x)
-        print(type(x))
+        # print(x)
+        # print(type(x))
         self.num_clients = len(x)
-        self.n_dims = x.shape[1]
+        self.n_dims = x[0].shape[1]
         clients_per_round = max(1, int(self.sample_fraction * self.num_clients))
         centroids = self.do_init_centroids()
 
@@ -408,8 +411,8 @@ def test_federated(unbalanced=True):
             np.array([[1.0, 0.0]])
         ]
         # x = [np.array([[0.1, 0.2], [0.1, 0.4], [0.1, 0.6], [1.0, 0.2], [1.0, 0.1], [1.0, 0.0]])]
-    print(x.shape)
-    print([d.shape for d in x])
+    print(x)
+    print("d shape is {}".format([d.shape for d in x]))
 
     kmeans = KMeansFederated(
         n_clusters=2,
@@ -423,26 +426,33 @@ def test_federated(unbalanced=True):
 
     centroids, overall_counts = kmeans.fit(X=x)
 
-    print(kmeans.predict(np.array([[0, 0], [1.2, 0.3]])))
-    print(kmeans.cluster_centers_)
+    # print(kmeans.predict(np.array([[0, 0], [1.2, 0.3]])))
+    # print(kmeans.cluster_centers_)
     # pickle.dump(kmeans.cluster_centers_, open("fed_kmeans.pkl", "wb"))
 def fed_kmeans():
     datasets = get_dataset_path()
     X, Y = load_datasets(datasets)
+    x_train,x_test,y_train,y_test = train_test_split(X,Y,test_size=0.2)
+    # transfer = StandardScaler()
+    # x_train = transfer.fit_transform(x_train)
+    # x_test = transfer.transform(x_test)
+    x_train = [x_train[i:i+1] for i in range(x_train.shape[0])]
+    print("x_train:".format(x_train))
     kmeans = KMeansFederated(
-        n_clusters=3,
+        n_clusters=2,
         sample_fraction=0,
         verbose=True,
-        learning_rate=5,
+        learning_rate=0.5,
         adaptive_lr=0.1,
         max_iter=100,
         # momentum=0.8,
     )
-    print(X.shape)
-    centroids, overall_counts = kmeans.fit(X=X)
 
-    print(kmeans.predict(np.array([[0, 0], [1.2, 0.3]])))
-    print(kmeans.cluster_centers_)    
+    centroids, overall_counts = kmeans.fit(X=x_train)
+    for i in range(len(x_train)):
+        # print("x_train[{}]: {}".format(i, x_train[i]))
+        print(kmeans.predict(x_train[i]))
+    # print(kmeans.cluster_centers_)    
 if __name__ == "__main__":
     # test_kmeans_python()
     # test_federated(
