@@ -8,3 +8,5 @@ __pycache__/
 fed_knn/datasets/
 datasets/*
 models/*
+!datasets/.gitkeep
+!models/.gitkeep
