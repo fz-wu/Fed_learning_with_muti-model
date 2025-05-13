@@ -25,25 +25,36 @@ def create_connect(client_num, port):
     print("client number = {}".format(client_num))
     print('Waiting for connection...')
 
-    for _ in range(client_num):
+    for i in range(client_num):
         client_socket, client_addr = server_socket.accept()
         client_sockets.append(client_socket)
         print("client_addr: {}".format(client_addr))
-
+        if args.model == "lgr":
+            client_socket.sendall(pickle.dumps(i + 1))
     for round in range(NUM_ROUNDS):
         print(f"Starting aggregation round {round + 1}...")
         sleep(1)
         print("All clients connected. Starting aggregation...")
-        # 接收所有权重
-        recved_weights = []
-        for client_socket in client_sockets:
-            serialized_clinet_weight = client_socket.recv(102400)
-            if not serialized_clinet_weight:
-                print("Warning: received empty data from client", client_socket.getpeername())
-                continue
-            client_weight = pickle.loads(serialized_clinet_weight)
-            print("Received weight from client {}: {}".format(client_socket.getpeername(),client_weights))
-            recved_weights.append(client_weight) # 等待客户端发送权重
+        if args.model == "lgr":
+            # 处理 LGR 模型逻辑回归
+            recved_weights = []
+            for client_socket in client_sockets:
+                data = client_socket.recv(102400)
+                ids, z = pickle.loads(data)
+                print("Received z from client {}: ids shape {}, z shape {}".format(
+                    client_socket.getpeername(), np.shape(ids), np.shape(z)))
+                recved_weights.append((ids, z))
+        else:
+            # 接收所有权重
+            recved_weights = []
+            for client_socket in client_sockets:
+                serialized_clinet_weight = client_socket.recv(102400)
+                if not serialized_clinet_weight:
+                    print("Warning: received empty data from client", client_socket.getpeername())
+                    continue
+                client_weight = pickle.loads(serialized_clinet_weight)
+                print("Received weight from client {}: {}".format(client_socket.getpeername(),client_weights))
+                recved_weights.append(client_weight) # 等待客户端发送权重
 
         print("recved_client_weights:{}".format(recved_weights))
         if args.model == "lr":
@@ -56,7 +67,6 @@ def create_connect(client_num, port):
             aggregated_weights = aggregate_svm(recved_weights)
         elif args.model == "cnn":
             aggregated_weights = aggregate_cnn(recved_weights)
-        
         print("Aggregated weights:", aggregated_weights)
 
         # 发送聚合后的权重到所有客户端
@@ -70,13 +80,6 @@ def create_connect(client_num, port):
 
         print("Weights sent to all clients. Ready for the next round.")
     print("All rounds completed. Closing server socket.")
-def create_lgr_connect(client_num, port, round_num):
-    global client_sockets
-    x1, x2, x3 = get_data()
-    y = get_labels().values.reshape(-1, 1)
-    server = Server(0.0001, LogisticRegressionModel, data=(x1, y))
-    N = x1.shape[0]
-
 
 def aggregate_lr(weights):
 
@@ -96,8 +99,32 @@ def aggregate_kmeans(weights):
     aggregated_centers = np.mean(weights, axis=0)  # shape: (n_clusters, n_features)
     return aggregated_centers
 
-def aggregate_lgr(weights):
-    pass
+def aggregate_lgr(client_data_list):
+    """
+    联邦逻辑回归的服务端聚合逻辑。
+    参数 client_data_list: [(ids, z_i), (ids, z_j), ...]
+    """
+    x1, _, _ = get_data()
+    y = get_labels().values.reshape(-1, 1)
+    server = Server(0.0001, LogisticRegressionModel, data=(x1, y))
+
+    z_parts = []
+    ids_list = []
+
+    for ids, z_i in client_data_list:
+        z_parts.append(z_i)
+        ids_list = ids  # 所有客户端应该是同一批 id
+
+    server.forward(ids_list)
+
+    for z_i in z_parts:
+        server.receive(z_i, 0)
+
+    server.compute_gradient()
+    diff = server.send()
+    server.update_model()
+
+    return diff  # 返回给客户端
 
 def aggregate_svm(weights):
     pass

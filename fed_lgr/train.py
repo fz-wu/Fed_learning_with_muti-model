@@ -5,6 +5,7 @@ from fed_lgr.model import LogisticRegressionModel
 from fed_lgr.client import Host
 from fed_lgr.heart_disease_dataset import get_data, get_labels
 from utils.options import args_parser  # 复用 fed_lr 的 options.py
+from utils.datasets import save_model_weights
 import os
 import sys
 
@@ -18,14 +19,21 @@ def generate_batch_ids(N, batch_size):
 def lgr_train():
     # Load vertically partitioned features
     x1, x2, x3 = get_data()
+    # x_list = get_data()
     y = get_labels().values.reshape(-1, 1)
     N = x1.shape[0]
+    # N = x_list[0].shape[0]
     round_num = args.round
     # Connect to server and receive assigned client index
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((args.server_ip, args.port))
     client_id = pickle.loads(client_socket.recv(1024))
     print(f"[Client] Assigned client index: {client_id}")
+    # Select appropriate data split based on client_id
+    # if 1 <= client_id <= len(x_list):
+    #     local_data = x_list[client_id - 1]
+    # else:
+    #     raise ValueError("Invalid client_id received from server")
     # Initialize local client model
     if client_id == 1:
         local_data = x1
@@ -54,7 +62,7 @@ def lgr_train():
         # Local gradient update
         host.compute_gradient()
         host.update_model()
-
+    save_model_weights((host.model.w, host.model.b))
     client_socket.close()
 
 if __name__ == "__main__":

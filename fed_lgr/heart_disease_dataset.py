@@ -4,6 +4,8 @@ import os
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
+from utils.options import args_parser
+args = args_parser()
 base_dir = os.path.dirname(os.path.abspath(__file__))
 df = pd.read_csv(os.path.join(base_dir, 'heart_disease.csv'))
 
@@ -25,7 +27,26 @@ x3_test = x_test.iloc[:, 9:].values
 
 def get_data():
     return x1,x2,x3
-    
+# def get_dataset_path():
+#     # 保证始终从项目根目录定位文件
+#     base_dir = os.path.dirname(os.path.abspath(__file__))
+#     root_dir = os.path.abspath(os.path.join(base_dir, '..'))  # 回到 fedlearning/
+#     dataset_path = os.path.join(root_dir, args.dataset)
+#     return dataset_path
+# def get_data():
+#     df = pd.read_csv(get_dataset_path())
+#     X = df.drop(columns=['output']).values
+#     num_clients = args.client_num
+#     num_features = X.shape[1]
+#     step = num_features // num_clients
+#
+#     feature_splits = []
+#     for i in range(num_clients):
+#         start = i * step
+#         end = (i + 1) * step if i < num_clients - 1 else num_features
+#         feature_splits.append(X[:, start:end])
+#
+#     return feature_splits  # 返回 list：[x1, x2, x3, ...]
 def get_labels():
     return y_train
 
