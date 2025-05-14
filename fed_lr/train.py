@@ -1,13 +1,9 @@
 import pandas as pd
 import numpy as np
 from sklearn.metrics import r2_score, accuracy_score
-from dotenv import find_dotenv, load_dotenv
 import socket
 
-import os
-import sys
 from utils.datasets import load_datasets, get_dataset_path, save_model_weights
-from utils.net import send_weights
 from utils.options import args_parser
 args = args_parser()
 
@@ -19,7 +15,6 @@ import pickle
 
 # Local Data for Each Clients
 # M, N = client1_localdata[0].shape
-
 
 class Model():
     
@@ -110,4 +105,6 @@ def lr_train():
         # print("train_theta:{}".format(theta[0]))
     # theta 
     save_model_weights(theta)
+    print("All round have finished. Save model weights success.")
     client_socket.close()
+    print("close socket")
