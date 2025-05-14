@@ -3,7 +3,7 @@ import argparse
 def args_parser():
     parser = argparse.ArgumentParser()
     # federated arguments
-    parser.add_argument('--role', type=str, )
+    parser.add_argument('--role', type=str, default='client', help='role of this process, client or server')
 
     parser.add_argument('--server_ip', type=str, default='127.0.0.1', help='server ip') # only for client
     parser.add_argument('--port', type=int, default=10000, help='server port') # only for client

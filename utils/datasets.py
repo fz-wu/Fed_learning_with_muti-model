@@ -25,10 +25,11 @@ def save_model_weights(model_weights):
     args = args_parser()
     model_name = args.model
     today = datetime.date.today()
+    now_time = datetime.datetime.now().strftime("%H:%M:%S")
     date4hash = datetime.datetime.now()
     hash_object = hashlib.md5(str(date4hash).encode())
     hash_str = str(hash_object.hexdigest()[:6])
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(base_dir, '../models/', model_name + "_" + str(today) + "_" +  hash_str +  ".pkl")
+    model_path = os.path.join(base_dir, '../models/', model_name + "_" + str(today) + "_" + now_time +  "_" +  hash_str +  ".pkl")
     with open(model_path, 'wb') as f:
         pickle.dump(model_weights, f)
