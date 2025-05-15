@@ -25,6 +25,8 @@ def get_dataset_path():
     # print(datasets_path)
     return datasets_path
 
+
+
 def save_model_weights(model_weights):
 
     args = args_parser()

@@ -1,12 +1,19 @@
 import argparse
+from re import A
 import time
 import copy
 import numpy as np
+import pandas as pd
 import random
 from torch import nn
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import Normalizer
 from sklearn.model_selection import RepeatedKFold
+
+def patch_asscalar(a):
+    return a.item()
+
+setattr(np, "asscalar", patch_asscalar)
 
 def load_dat(filepath, minmax=None, normalize=False, bias_term=True):
     """ load a dat file
@@ -133,17 +140,20 @@ def noise_add(w, noise_scale,dim):
 def main(args):
     fpath = "./dataset/{0}.dat".format(args.dname)
     X, y = load_dat(fpath, minmax=(0, 1), normalize=False, bias_term=True)
+    # X = pd.DataFrame(X)
+    # X.to_csv('X.csv', index=False)
+    # 如果有非字符列需要进行独热编码
+    # X_ohe = pd.get_dummies(	X, columns=['workclass'], drop_first=True)
     N, dim = X.shape
     y[y < 1] = -1
+
 
     grad_clip = args.grad_clip
     set_num_epochs = args.num_epochs
     reg_coeff = args.reg_coeff
     step_size = args.step_size 
     
-    delta = args.delta
-    set_privacy_budget = args.set_privacy_budget
-    clipthr = args.clipthr    
+    clipthr =  10   
     
     num_experiments = args.num_experiments
 
@@ -151,93 +161,86 @@ def main(args):
     num_Chosenusers = args.num_Chosenusers
     num_train = args.num_train
     
-    for eps in range(len(set_privacy_budget)):
-        privacy_budget = copy.deepcopy(set_privacy_budget[eps])
-        print('Privacy budget:{}, Clients number:{},Chosen clients:{}, Dataset size:{}, Experiment times:{}\n'.format(privacy_budget,\
-              num_users, num_Chosenusers, num_train, num_experiments))
-        epo_acc, epo_obj = [], [0]
-        for j in range(len(set_num_epochs)):
-            num_epochs = copy.deepcopy(set_num_epochs[j])
-            avg_acc, avg_obj =[], []
-            q_s = num_Chosenusers/num_users
-            if privacy_budget>10000:
-                noise_scale = 0
-            else:
-                noise_scale = 2*clipthr*np.sqrt(2*q_s*num_epochs*np.log(1/delta))/(privacy_budget*num_train)
-            # noise_scale = 0
-            for num_exper in range(num_experiments):
-                acc_test = np.zeros(num_users)
-                obj_test = np.zeros(num_users)
-                avg_acc_test, avg_obj_test = [], []
-                acc_train = np.zeros(num_users)
-                obj_train = np.zeros(num_users)
-                avg_acc_train, avg_obj_train = [], []
-                sol_glob = copy.deepcopy(np.zeros(dim))                
-                for i in range(num_epochs):
-                    sol_locals = []
-                    if  num_Chosenusers < num_users:
-                        chosenUsers = random.sample(range(1,num_users),num_Chosenusers)
-                        chosenUsers.sort()
-                    else:
-                        chosenUsers = range(num_users)
-                    # print("\nChosen users:", chosenUsers)                     
-                    for k in chosenUsers:
-                        train_X, train_y = X[k*num_train:(k+1)*num_train,:], y[k*num_train:(k+1)*num_train]
-                        test_X, test_y = X[num_users*num_train:,:], y[num_users*num_train:]
-                    
-                        n_train = train_X.shape[0]
-                        n_test = test_X.shape[0]
-                        N, dim = train_X.shape
-                        sol = copy.deepcopy(sol_glob) 
-                        if args.batch_size > 0:
-                            # build a mini-batch
-                            idx_len = int(np.ceil(N/args.batch_size))
-                            for batch_idx in range(idx_len):
-                                mini_X = X[batch_idx*args.batch_size:(batch_idx+1)*args.batch_size, :]
-                                mini_y = y[batch_idx*args.batch_size:(batch_idx+1)*args.batch_size]
-                                grad = svm_grad(sol, mini_X, mini_y, grad_clip)
-                                if reg_coeff > 0:
-                                    grad += reg_coeff * sol                
-                                sol += - step_size * grad
-                            # rand_idx = np.random.choice(N, size=args.batch_size, replace=False)
-                        else:
-                            mini_X = X
-                            mini_y = y
+    
+    print('Clients number:{},Chosen clients:{}, Dataset size:{}, Experiment times:{}\n'.format(\
+            num_users, num_Chosenusers, num_train, num_experiments))
+    epo_acc, epo_obj = [], [0]
+    for j in range(len(set_num_epochs)):
+        num_epochs = copy.deepcopy(set_num_epochs[j])
+        avg_acc, avg_obj =[], []
+        q_s = num_Chosenusers/num_users
+
+        for num_exper in range(num_experiments):
+            acc_test = np.zeros(num_users)
+            obj_test = np.zeros(num_users)
+            avg_acc_test, avg_obj_test = [], []
+            acc_train = np.zeros(num_users)
+            obj_train = np.zeros(num_users)
+            avg_acc_train, avg_obj_train = [], []
+            sol_glob = copy.deepcopy(np.zeros(dim))                
+            for i in range(num_epochs):
+                sol_locals = []
+                if  num_Chosenusers < num_users:
+                    chosenUsers = random.sample(range(1,num_users),num_Chosenusers)
+                    chosenUsers.sort()
+                else:
+                    chosenUsers = range(num_users)
+                # print("\nChosen users:", chosenUsers)                     
+                for k in chosenUsers:
+                    train_X, train_y = X[k*num_train:(k+1)*num_train,:], y[k*num_train:(k+1)*num_train]
+                    test_X, test_y = X[num_users*num_train:,:], y[num_users*num_train:]
+                
+                    n_train = train_X.shape[0]
+                    n_test = test_X.shape[0]
+                    N, dim = train_X.shape
+                    sol = copy.deepcopy(sol_glob) 
+                    if args.batch_size > 0:
+                        # build a mini-batch
+                        idx_len = int(np.ceil(N/args.batch_size))
+                        for batch_idx in range(idx_len):
+                            mini_X = X[batch_idx*args.batch_size:(batch_idx+1)*args.batch_size, :]
+                            mini_y = y[batch_idx*args.batch_size:(batch_idx+1)*args.batch_size]
                             grad = svm_grad(sol, mini_X, mini_y, grad_clip)
                             if reg_coeff > 0:
                                 grad += reg_coeff * sol                
                             sol += - step_size * grad
-                        sol_locals.append(sol)
-                        obj_train[k] = svm_loss(sol, train_X, train_y) / n_train
-                        acc_train[k] = svm_test(sol, train_X, train_y) * 100.0   
-                        
-                    sol_glob = np.zeros(dim)
-                    for k in range(len(chosenUsers)):
-                        ### Clipping  ###            
-                        sol_locals[k] = copy.deepcopy(clipping(sol_locals[k], clipthr))
-                        # print('\nLocal parameters' ,w_locals[i])
-                        ### Add noise  ###                
-                        sol_locals[k] = copy.deepcopy(noise_add(sol_locals[k], noise_scale, dim))                                        
-                        sol_glob += sol_locals[k]
-                    sol_glob = sol_glob/len(chosenUsers)
+                        # rand_idx = np.random.choice(N, size=args.batch_size, replace=False)
+                    else:
+                        mini_X = X
+                        mini_y = y
+                        grad = svm_grad(sol, mini_X, mini_y, grad_clip)
+                        if reg_coeff > 0:
+                            grad += reg_coeff * sol                
+                        sol += - step_size * grad
+                    sol_locals.append(sol)
+                    obj_train[k] = svm_loss(sol, train_X, train_y) / n_train
+                    acc_train[k] = svm_test(sol, train_X, train_y) * 100.0   
                     
-                    obj_test = svm_loss(sol_glob, test_X, test_y) / n_test
-                    acc_test = svm_test(sol_glob, test_X, test_y) * 100.0 
-                    
-                    avg_acc_train.append(sum(acc_train)/len(acc_train))    
-                    avg_obj_train.append(sum(obj_train)/len(obj_train))        
-                    avg_acc_test.append(acc_test)    
-                    avg_obj_test.append(obj_test)
-                    
-                avg_acc.append(avg_acc_test[-1])
-                avg_obj.append(avg_obj_test[-1])
-            epo_obj.append(sum(avg_obj)/len(avg_obj)) 
-            epo_acc.append(sum(avg_acc)/len(avg_acc))
-            # print('*' * 20,f'Epoch[{i+1}/{num_epochs}]','*' * 20)               
-            print(f'loss: {sum(avg_obj)/len(avg_obj):.6f}, acc: {sum(avg_acc)/len(avg_acc):.6f}, STD: {noise_scale}')
-            if (epo_obj[-1]+epo_obj[-2])/2>epo_obj[1]:
-                break
-        print('Total loss:{}\n'.format(epo_obj))  
+                sol_glob = np.zeros(dim)
+                for k in range(len(chosenUsers)):
+                    ### Clipping  ###            
+                    sol_locals[k] = copy.deepcopy(clipping(sol_locals[k], clipthr))
+                    # print('\nLocal parameters' ,w_locals[i])
+                    ### Add noise  ###                
+                    sol_glob += sol_locals[k]
+                sol_glob = sol_glob/len(chosenUsers)
+                
+                obj_test = svm_loss(sol_glob, test_X, test_y) / n_test
+                acc_test = svm_test(sol_glob, test_X, test_y) * 100.0 
+                
+                avg_acc_train.append(sum(acc_train)/len(acc_train))    
+                avg_obj_train.append(sum(obj_train)/len(obj_train))        
+                avg_acc_test.append(acc_test)    
+                avg_obj_test.append(obj_test)
+                
+            avg_acc.append(avg_acc_test[-1])
+            avg_obj.append(avg_obj_test[-1])
+        epo_obj.append(sum(avg_obj)/len(avg_obj)) 
+        epo_acc.append(sum(avg_acc)/len(avg_acc))
+        # print('*' * 20,f'Epoch[{i+1}/{num_epochs}]','*' * 20)               
+        print(f'loss: {sum(avg_obj)/len(avg_obj):.6f}, acc: {sum(avg_acc)/len(avg_acc):.6f}')
+        if (epo_obj[-1]+epo_obj[-2])/2>epo_obj[1]:
+            break
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='adaptive sgd')
@@ -253,7 +256,6 @@ if __name__ == "__main__":
     parser.add_argument('--num_Chosenusers', type=int, default=50)    
     parser.add_argument('--num_train', type=int, default=128)
     parser.add_argument('--num_experiments', type=int, default=2)
-    parser.add_argument('--delta', type=float, default=0.01)
     parser.add_argument('--set_privacy_budget', type=int, default=[100000000])
     parser.add_argument('--clipthr', type=int, default=10)    
 

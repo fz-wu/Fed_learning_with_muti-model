@@ -44,13 +44,12 @@ class CNNModel():
     def loss(self, outputs, targets):
         return self.criterion(outputs, targets)
 
-    def fit(self, train_loader):
+    def fit(self, train_loader, device):
         cost_list = [0] * self.epochs
         for epoch in range(self.epochs):
             running_loss = 0.0
             for data, target in train_loader:
-                # data, target = data.to('cuda'), target.to('cuda')
-                data, target = data.to(args.device), target.to(args.device)
+                data, target = data.to(device), target.to(device)
                 # Zero the gradients
                 self.optimizer.zero_grad()
 
@@ -68,14 +67,14 @@ class CNNModel():
         
         return self.model.state_dict()  # Return the updated weights
     
-    def evaluate(self, test_loader):
+    def evaluate(self, test_loader, device):
         self.model.eval()
-        self.model.to('cuda')
+        self.model.to(device)
         correct = 0
         total = 0
         with torch.no_grad():
             for data, target in test_loader:
-                data, target = data.to('cuda'), target.to('cuda')
+                data, target = data.to(device), target.to(device)
                 outputs = self.model(data)
                 _, predicted = torch.max(outputs.data, 1)
                 total += target.size(0)
@@ -97,8 +96,8 @@ def cnn_train(train_loader,test_loader):
         print(f"\nRound {round + 1}")
 
         # 本地训练
-        new_theta = model.fit(train_loader)
-        model.evaluate(test_loader)
+        new_theta = model.fit(train_loader, args.device)
+        model.evaluate(test_loader, args.device)
 
         # 获取训练样本数量
         local_sample_num = len(train_loader.dataset)

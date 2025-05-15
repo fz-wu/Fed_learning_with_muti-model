@@ -10,3 +10,4 @@ datasets/*
 models/*
 !datasets/.gitkeep
 !models/.gitkeep
+data_split
