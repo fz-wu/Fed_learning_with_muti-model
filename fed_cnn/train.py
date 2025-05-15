@@ -49,8 +49,8 @@ class CNNModel():
         for epoch in range(self.epochs):
             running_loss = 0.0
             for data, target in train_loader:
-                data, target = data.to('cuda'), target.to('cuda')
-
+                # data, target = data.to('cuda'), target.to('cuda')
+                data, target = data.to(args.device), target.to(args.device)
                 # Zero the gradients
                 self.optimizer.zero_grad()
 
@@ -122,6 +122,7 @@ def cnn_train(train_loader,test_loader):
             serialized_weights = recvall(client_socket, total_length)
             theta = pickle.loads(serialized_weights)
             model.model.load_state_dict(theta)
+            model.model.to(args.device)  # <<< 加上这一句
             print("Updated model from server.")
         except Exception as e:
             print(f"Error receiving updated weights: {e}")
