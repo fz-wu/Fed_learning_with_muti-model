@@ -7,7 +7,6 @@ from utils.options import args_parser
 from fed_lgr.server import Server
 from fed_lgr.model import LogisticRegressionModel
 from fed_lgr.heart_disease_dataset import get_data, get_labels
-from utils.transmit import recvall
 import torch
 # 全局变量
 args = args_parser()
@@ -17,6 +16,16 @@ client_count = 0
 client_lock = threading.Lock()
 all_clients_connected_event = threading.Event()
 NUM_ROUNDS =  args.round # 联邦学习迭代轮数
+
+
+def recvall(sock, length):
+    data = b''
+    while len(data) < length:
+        more = sock.recv(length - len(data))
+        if not more:
+            raise EOFError('Socket closed before receiving all data')
+        data += more
+    return data
 
 def create_connect(client_num, port):
     global client_weights, client_count, all_clients_connected_event, client_sockets
