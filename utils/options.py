@@ -17,5 +17,12 @@ def args_parser():
     # parser.add_argument('--local_bs', type=int, default=100, help="local batch size: B")
     parser.add_argument('--lr', type=float, default=0.01, help="learning rate") # only for gardient descent
     # parser.add_argument('--split', type=str, default='user', help="train-test split type, user or sample")
+    
+    # cnn 新加
+    parser.add_argument('--client_id', type=int, default=1, help="client_id")
+    parser.add_argument('--batch_size', type=int, default=32, help="batch size cifar10")
+    parser.add_argument('--epochs', type=int, default=10, help="local epochs cifar10")
+    parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'], help='Device to run the training on (cpu or cuda)')
+    
     args = parser.parse_args()
     return args
