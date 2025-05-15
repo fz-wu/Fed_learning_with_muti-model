@@ -146,16 +146,14 @@ def main(args):
     # X_ohe = pd.get_dummies(	X, columns=['workclass'], drop_first=True)
     N, dim = X.shape
     y[y < 1] = -1
-    
+
 
     grad_clip = args.grad_clip
     set_num_epochs = args.num_epochs
     reg_coeff = args.reg_coeff
     step_size = args.step_size 
     
-    delta = args.delta
-    set_privacy_budget = args.set_privacy_budget
-    clipthr = args.clipthr    
+    clipthr =  10   
     
     num_experiments = args.num_experiments
 

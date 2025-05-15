@@ -1,3 +1,4 @@
+from json import load
 import pandas as pd
 import numpy as np
 from sklearn.metrics import r2_score, accuracy_score
@@ -103,7 +104,13 @@ def lr_train():
 
         # model.train()
         # print("train_theta:{}".format(theta[0]))
+        
     # theta 
+    test_data_path = datasets_path.replace("train", "test")
+    print(test_data_path)
+    X_test, y_test = load_datasets(test_data_path)
+    y_pred = predict(X_test, theta)  # Can be used to predict the testdata
+    print('The r2_score is {}'.format(r2_score(y_test,y_pred)))
     save_model_weights(theta)
     print("All round have finished. Save model weights success.")
     client_socket.close()
