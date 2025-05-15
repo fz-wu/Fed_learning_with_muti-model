@@ -4,9 +4,10 @@ import pickle
 import numpy as np
 from time import sleep
 from utils.options import args_parser
-from fed_lgr.server import Server
+from utils.datasets import get_dataset_path, load_datasets
 from fed_lgr.model import LogisticRegressionModel
-from fed_lgr.heart_disease_dataset import get_data, get_labels
+from sklearn.metrics import accuracy_score
+
 # 全局变量
 args = args_parser()
 client_weights = []
@@ -29,38 +30,38 @@ def create_connect(client_num, port):
         client_socket, client_addr = server_socket.accept()
         client_sockets.append(client_socket)
         print("client_addr: {}".format(client_addr))
-        if args.model == "lgr":
-            client_socket.sendall(pickle.dumps(i + 1))
+        # 发编号给客户端
+        client_socket.sendall(pickle.dumps(i))
+    if args.model == "lgr":
+        X, Y = load_datasets(get_dataset_path())
+        model = LogisticRegressionModel(X, lr=args.lr)
+        init_weights = (model.w, model.b)
+        serialized_init = pickle.dumps(init_weights)
+        for client_socket in client_sockets:
+            client_socket.sendall(serialized_init)
+        print("[Server] Initial weights sent to all clients.")
+
     for round in range(NUM_ROUNDS):
         print(f"Starting aggregation round {round + 1}...")
         sleep(1)
         print("All clients connected. Starting aggregation...")
-        if args.model == "lgr":
-            # 处理 LGR 模型逻辑回归
-            recved_weights = []
-            for client_socket in client_sockets:
-                data = client_socket.recv(102400)
-                ids, z = pickle.loads(data)
-                print("Received z from client {}: ids shape {}, z shape {}".format(
-                    client_socket.getpeername(), np.shape(ids), np.shape(z)))
-                recved_weights.append((ids, z))
-        else:
-            # 接收所有权重
-            recved_weights = []
-            for client_socket in client_sockets:
-                serialized_clinet_weight = client_socket.recv(102400)
-                if not serialized_clinet_weight:
-                    print("Warning: received empty data from client", client_socket.getpeername())
-                    continue
-                client_weight = pickle.loads(serialized_clinet_weight)
-                print("Received weight from client {}: {}".format(client_socket.getpeername(),client_weights))
-                recved_weights.append(client_weight) # 等待客户端发送权重
+        # 接收所有权重
+        recved_weights = []
+        for client_socket in client_sockets:
+            serialized_clinet_weight = client_socket.recv(102400)
+            if not serialized_clinet_weight:
+                print("Warning: received empty data from client", client_socket.getpeername())
+                continue
+            client_weight = pickle.loads(serialized_clinet_weight)
+            print("Received weight from client {}: {}".format(client_socket.getpeername(), client_weight))
+            recved_weights.append(client_weight) # 等待客户端发送权重
 
-        print("recved_client_weights:{}".format(recved_weights))
+        # print("recved_client_weights:{}".format(recved_weights))
         if args.model == "lr":
             aggregated_weights = aggregate_lr(recved_weights)
         elif args.model == "lgr":
-            aggregated_weights = aggregate_lgr(recved_weights)
+            aggregated_weights = aggregate_lgr(recved_weights, model, X, Y)
+            model.w, model.b = aggregated_weights  # 更新服务端模型参数
         elif args.model == "kmeans":
             aggregated_weights = aggregate_kmeans(recved_weights)
         elif args.model == "svm":
@@ -99,32 +100,38 @@ def aggregate_kmeans(weights):
     aggregated_centers = np.mean(weights, axis=0)  # shape: (n_clusters, n_features)
     return aggregated_centers
 
-def aggregate_lgr(client_data_list):
+def aggregate_lgr(client_data_list, model, X, Y):
     """
     联邦逻辑回归的服务端聚合逻辑。
-    参数 client_data_list: [(ids, z_i), (ids, z_j), ...]
+    参数 client_data_list: [(ids, z_i), ...]
+    返回更新后的 (W, b)
     """
-    x1, _, _ = get_data()
-    y = get_labels().values.reshape(-1, 1)
-    server = Server(0.0001, LogisticRegressionModel, data=(x1, y))
+    # 初始化 z_total 向量，shape 与服务端数据一致
+    z_total = np.zeros((X.shape[0], 1))
 
-    z_parts = []
-    ids_list = []
-
+    # 遍历每个客户端的 (ids, z_i)
     for ids, z_i in client_data_list:
-        z_parts.append(z_i)
-        ids_list = ids  # 所有客户端应该是同一批 id
+        ids = ids.reshape(-1).astype(int)
+        if z_i.shape[0] != ids.shape[0]:
+            raise ValueError(f"Mismatched shape: z_i={z_i.shape}, ids={ids.shape}")
+        z_total[ids] += z_i
 
-    server.forward(ids_list)
+    # 加上服务端自己的预测 z
+    z_server = model.forward(X)
+    z_total += z_server
 
-    for z_i in z_parts:
-        server.receive(z_i, 0)
+    # 计算 diff 和更新模型
+    diff = model.compute_diff(z_total, Y)
+    model.compute_gradient(diff)
+    model.update_model()
 
-    server.compute_gradient()
-    diff = server.send()
-    server.update_model()
+    # 输出准确率
+    y_pred = model.predict(X)
+    acc = accuracy_score(Y, y_pred)
+    print(f"[Server] Accuracy: {acc:.4f}")
 
-    return diff  # 返回给客户端
+    return (model.w, model.b)
+
 
 def aggregate_svm(weights):
     pass
