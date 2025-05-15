@@ -22,6 +22,9 @@ This project is a multi-client federated learning application that supports line
 | `--round`        | int    | 10          | 所有          | 训练轮数                               |
 | `--label_num`    | int    | 2           | 所有          | 标签数量（分类任务用）                 |
 | `--lr`           | float  | 0.01        | 所有          | 学习率（仅梯度下降法相关模型用）       |
+| `--batch_size`   | int    | 32          | client        | 批处理大小            |
+| `--epochs`       | int    | 10          | client        | 本地训练轮数             |
+| `--device`       | str    | cuda        | client        | 训练设备，选择 `'cpu'` 或 `'cuda'`
 
 ---
 
@@ -44,9 +47,44 @@ This project is a multi-client federated learning application that supports line
 --round：训练轮数。
 --label_num：分类任务的标签数量。
 --lr：学习率，仅对梯度下降法相关模型有效。
+--batch_size：客户端需指定批处理大小。  
+--epochs：客户端需指定本地训练轮数，用于控制每轮通信前的训练次数。  
+--device：客户端需指定训练设备，可选 'cpu' 或 'cuda'，默认使用 GPU（cuda）。
 如需更多参数说明，请参考 utils/options.py 文件中的 args_parser() 实现。
 
+### CNN 图像分类模型
 
+本项目实现了一个用于图像分类任务的轻量级卷积神经网络（CNN），适用于自定义图像数据集。模型可用于联邦学习场景，支持 GPU 加速。
+
+**模型架构**
+
+- **Conv1**：输入 3 通道，输出 32 通道，卷积核 3×3，ReLU 激活  
+- **MaxPool1**：2×2 最大池化  
+- **Conv2**：输入 32 通道，输出 64 通道，卷积核 3×3，ReLU 激活  
+- **MaxPool2**：2×2 最大池化  
+- **Flatten**：展平为一维向量  
+- **FC1**：输入 4096，输出 128，ReLU 激活  
+- **FC2**：输入 128，输出类别数（默认 10）
+
+**数据集要求**
+
+- 彩色图像将被裁剪为 **32×32** 尺寸
+- 所有图像按类别放入子文件夹中，文件夹名为类别标签  
+- 数据目录结构示例：
+```
+datasets/
+└── your_dataset/
+    ├── class_a/
+    │   ├── img1.png
+    │   ├── img2.png
+    ├── class_b/
+    │   ├── img1.png
+    │   ├── img2.png
+```
+**当前测试所用数据集链接** 
+- [cifar-10 Python version (.tar.gz)](https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz)
+- [cinic-10 Python version (.tar.gz)](https://datashare.is.ed.ac.uk/bitstream/handle/10283/3192/CINIC-10.tar.gz)
+- 文件解压到datasets文件夹下，并以小写cifar-10/cinic-10命名 (或确保--dataset 名称 与 数据集名称对应)
 
 ## POST请求说明
 

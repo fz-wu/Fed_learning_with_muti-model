@@ -7,6 +7,8 @@ from utils.options import args_parser
 from fed_lgr.server import Server
 from fed_lgr.model import LogisticRegressionModel
 from fed_lgr.heart_disease_dataset import get_data, get_labels
+from utils.transmit import recvall
+import torch
 # 全局变量
 args = args_parser()
 client_weights = []
@@ -70,13 +72,66 @@ def create_connect(client_num, port):
 
         print("Weights sent to all clients. Ready for the next round.")
     print("All rounds completed. Closing server socket.")
+
+def create_connect_cnn(client_num, port):
+    global client_sockets
+    client_sockets = []
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind(("0.0.0.0", port))
+    server_socket.listen(client_num)
+    print(f"client number = {client_num}")
+    print('Waiting for connection...')
+
+    for _ in range(client_num):
+        client_socket, client_addr = server_socket.accept()
+        client_sockets.append(client_socket)
+        print(f"client_addr: {client_addr}")
+
+    for round in range(NUM_ROUNDS):
+        print(f"\nStarting aggregation round {round + 1}...")
+        sleep(1)
+        recved_payloads = []
+        for client_socket in client_sockets:
+            try:
+                # 从 socket 中接收前 4 个字节，表示后续数据的总长度（以字节为单位）
+                length_data = recvall(client_socket, 4)
+                # 将收到的 4 个字节转换为整数，得到实际要接收的数据长度（大端字节序）
+                total_length = int.from_bytes(length_data, byteorder='big')
+                # 持续从 socket 中接收数据，直到接收到 total_length 字节为止，确保数据完整
+                serialized_data = recvall(client_socket, total_length)
+                payload = pickle.loads(serialized_data)
+                client_weight = payload['weights']
+                sample_num = payload['num_samples']
+                recved_payloads.append((client_weight, sample_num))
+                print(f"Received weight and sample count ({sample_num}) from client {client_socket.getpeername()}.")
+            except Exception as e:
+                print(f"Error receiving data from client {client_socket.getpeername()}: {e}")
+        # 聚合 [(weight, sample_num), ...]
+        aggregated_weights = aggregate_cnn(recved_payloads)
+        for client_socket in client_sockets:
+            try:
+                serialized_weights = pickle.dumps(aggregated_weights)
+                data_length = len(serialized_weights)
+                client_socket.sendall(data_length.to_bytes(4, byteorder='big'))
+                client_socket.sendall(serialized_weights)
+                print(f"Sent aggregated weights to client {client_socket.getpeername()}.")
+            except Exception as e:
+                print(f"Error sending weights to client {client_socket.getpeername()}: {e}")
+        print("Weights sent to all clients. Ready for the next round.")
+    print("All rounds completed. Closing server socket.")
+    server_socket.close()
+    for sock in client_sockets:
+        sock.close()
+
+
 def create_lgr_connect(client_num, port, round_num):
     global client_sockets
     x1, x2, x3 = get_data()
     y = get_labels().values.reshape(-1, 1)
     server = Server(0.0001, LogisticRegressionModel, data=(x1, y))
     N = x1.shape[0]
-
 
 def aggregate_lr(weights):
 
@@ -102,8 +157,19 @@ def aggregate_lgr(weights):
 def aggregate_svm(weights):
     pass
 
-def aggregate_cnn(weights):
-    pass
+# cnn模型聚合方法
+def aggregate_cnn(client_payloads):
+    aggregated_weights = {}
+    total_samples = sum(num_samples for _, num_samples in client_payloads)
+    # 取第一个客户端的结构作为参考
+    for layer_name in client_payloads[0][0].keys():
+        # 初始化聚合张量
+        layer_sum = torch.zeros_like(client_payloads[0][0][layer_name])
+        for state_dict, num_samples in client_payloads:
+            weight = state_dict[layer_name].float()  # 确保计算时是 float
+            layer_sum += weight * (num_samples / total_samples)
+        aggregated_weights[layer_name] = layer_sum
+    return aggregated_weights
 
 def send_weights(target_host, port, weights):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
