@@ -8,6 +8,8 @@ import torch
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.model_selection import train_test_split
 
 def load_datasets(dataset_path):
     df_train = pd.read_csv(dataset_path)
@@ -132,3 +134,33 @@ def prepare_and_save_split(dataset_name, batch_size, raw_data_dir, save_dir, cli
     test_save_path = os.path.join(save_dir, f"{dataset_name}_test.pt")
     torch.save(test_data, test_save_path)
     # print(f"[Server] Saved test set to {test_save_path}")
+    
+
+# 加载 CSV 数据并进行归一化、标准化等预处理
+def load_csv(filepath, label_col='target', minmax=None, standardize=True, bias_term=True):
+    # 自动判断分隔符是 ',' 还是 ';'
+    with open(filepath, 'r', encoding='utf-8') as f:
+        first_line = f.readline()
+        sep = ';' if ';' in first_line else ','
+
+    df = pd.read_csv(filepath, sep=sep)
+    labels = df[label_col].values
+    features = df.drop(columns=[label_col]).values
+
+    if minmax is not None:
+        scaler = MinMaxScaler(feature_range=minmax)
+        features = scaler.fit_transform(features)
+    elif standardize:
+        scaler = StandardScaler()
+        features = scaler.fit_transform(features)
+
+    if bias_term:
+        features = np.hstack([np.ones((features.shape[0], 1)), features])
+
+    return features, labels
+
+# 数据集划分函数
+def split_data(dataset_path, label_col='target', test_size=0.2, random_state=42):
+    X, y = load_csv(dataset_path, label_col=label_col)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+    return X_train, X_test, y_train, y_test, X.shape[1], len(np.unique(y))

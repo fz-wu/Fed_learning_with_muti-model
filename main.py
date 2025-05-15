@@ -1,10 +1,11 @@
 from utils.options import args_parser
-from utils.net import create_connect, create_connect_cnn
+from utils.net import create_connect, create_connect_cnn, create_connect_svm
 
 from fed_lr.train import lr_train
 from fed_lgr.train import lgr_train
 # from fed_kmeans.train import kmeans_train
-from fed_svm.main import svm_train
+# from fed_svm.main import svm_train
+from fed_svm.train import svm_train
 from fed_cnn.train import cnn_train
 import os 
 from utils.datasets import acquire_and_load_data, prepare_and_save_split
@@ -47,6 +48,8 @@ if __name__ == "__main__":
             print('Data segmentation completed')
             # 服务器运行
             create_connect_cnn(args.client_num, args.port)
+        elif args.model == 'svm':
+            create_connect_svm(args.client_num, args.port)      
         else:
             create_connect(args.client_num, args.port)
 

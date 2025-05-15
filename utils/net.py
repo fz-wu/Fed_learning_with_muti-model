@@ -135,6 +135,59 @@ def create_connect_cnn(client_num, port):
         sock.close()
 
 
+# SVM 服务端端口监听并聚合客户端上传模型的函数
+def create_connect_svm(client_num, port):
+    client_sockets = []
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind(("0.0.0.0", port))
+    server_socket.listen(client_num)
+    print(f"client number = {client_num}")
+    print('Waiting for connection...')
+
+    for _ in range(client_num):
+        client_socket, client_addr = server_socket.accept()
+        client_sockets.append(client_socket)
+        print(f"client_addr: {client_addr}")
+
+    for round in range(NUM_ROUNDS):
+        print(f"\nStarting aggregation round {round + 1}...")
+        sleep(1)
+        recved_payloads = []
+        for client_socket in client_sockets:
+            try:
+                length_data = recvall(client_socket, 4)
+                total_length = int.from_bytes(length_data, byteorder='big')
+                serialized_data = recvall(client_socket, total_length)
+                payload = pickle.loads(serialized_data)
+                client_weight = payload['weights']
+                sample_num = payload['num_samples']
+                recved_payloads.append((client_weight, sample_num))
+                print(f"Received weights and sample count ({sample_num}) from client {client_socket.getpeername()}.")
+            except Exception as e:
+                print(f"Error receiving data from client {client_socket.getpeername()}: {e}")
+
+        aggregated_weights = aggregate_svm(recved_payloads)
+
+        for client_socket in client_sockets:
+            try:
+                serialized_weights = pickle.dumps(aggregated_weights)
+                data_length = len(serialized_weights)
+                client_socket.sendall(data_length.to_bytes(4, byteorder='big'))
+                client_socket.sendall(serialized_weights)
+                print(f"Sent aggregated weights to client {client_socket.getpeername()}.")
+            except Exception as e:
+                print(f"Error sending weights to client {client_socket.getpeername()}: {e}")
+
+        print("Weights sent to all clients. Ready for the next round.")
+
+    print("All rounds completed. Closing server socket.")
+    server_socket.close()
+    for sock in client_sockets:
+        sock.close()
+
+
 def create_lgr_connect(client_num, port, round_num):
     global client_sockets
     x1, x2, x3 = get_data()
@@ -163,8 +216,14 @@ def aggregate_kmeans(weights):
 def aggregate_lgr(weights):
     pass
 
-def aggregate_svm(weights):
-    pass
+# 联邦聚合函数：按客户端样本数加权平均多个权重
+def aggregate_svm(payloads):
+    total_samples = sum(n for _, n in payloads)
+    label_num, dim = payloads[0][0].shape
+    aggregated = np.zeros((label_num, dim))
+    for weights, num_samples in payloads:
+        aggregated += weights * (num_samples / total_samples)
+    return aggregated
 
 # cnn模型聚合方法
 def aggregate_cnn(client_payloads):
@@ -190,5 +249,3 @@ def send_weights(target_host, port, weights):
     print("client_weight:{}".format(new_weight))
     # sock.close()
     return new_weight
-
-
