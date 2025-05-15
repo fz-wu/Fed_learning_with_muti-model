@@ -42,7 +42,7 @@ def lgr_train():
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((args.server_ip, args.port))
 
-    # 新增：接收自己的 client_id
+    # 接收自己的 client_id
     client_id_data = client_socket.recv(1024)
     client_id = pickle.loads(client_id_data)
     datasets_path = get_dataset_path()

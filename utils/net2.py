@@ -53,7 +53,7 @@ def create_connect(client_num, port):
                 print("Warning: received empty data from client", client_socket.getpeername())
                 continue
             client_weight = pickle.loads(serialized_clinet_weight)
-            print("Received weight from client {}: {}".format(client_socket.getpeername(), client_weight))
+            # print("Received weight from client {}: {}".format(client_socket.getpeername(), client_weight))
             recved_weights.append(client_weight) # 等待客户端发送权重
 
         # print("recved_client_weights:{}".format(recved_weights))
