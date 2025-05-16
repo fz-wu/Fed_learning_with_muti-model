@@ -5,7 +5,7 @@ import pandas as pd
 import socket
 import pickle
 from time import sleep
-from utils.transmit import recvall
+from utils.net import recvall
 from utils.datasets import save_model_weights
 from utils.options import args_parser
 from utils.datasets import load_csv, split_data
@@ -49,7 +49,7 @@ class SVMClassifier:
 
 # 客户端训练流程
 def svm_train():
-    X_train, X_test, y_train, y_test, dim, label_num = split_data(f"./datasets/{args.dataset}.csv", label_col='target')
+    X_train, X_test, y_train, y_test, dim, label_num = split_data(f"./datasets/{args.dataset}", label_col='target')
     # assert label_num == args.label_num
     model = SVMClassifier(label_num=label_num, dim=dim)
 

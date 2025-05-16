@@ -8,7 +8,7 @@ args = args_parser()
 from datetime import datetime
 import hashlib
 from utils.datasets import save_model_weights
-from utils.transmit import recvall
+from utils.net import recvall
 
 # CNN架构: 2层卷积
 class CNN(nn.Module):
