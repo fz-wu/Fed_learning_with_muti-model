@@ -31,7 +31,7 @@ class Model():
         self.epochs = iterations
         
     def loss(self):
-        cost = np.sum((((self.x.dot(self.w) + self.b) - self.y) ** 2) / (2*len(self.y)))
+        cost = np.sum((((self.x.dot(self.w) + self.b) - self.y) ** 2) / (2 * len(self.y)))
         return cost
 
     def fit(self,theta):
@@ -65,7 +65,11 @@ def lr_train():
     args = args_parser()
 
     datasets_path = get_dataset_path()
+    test_data_path = datasets_path.replace("train", "test")
+
     X, Y = load_datasets(datasets_path)
+    X_test, y_test = load_datasets(test_data_path)
+
     round = args.round
     print("X:{}".format(X))
     print("Y:{}".format(Y))
@@ -74,14 +78,13 @@ def lr_train():
     print("M:{}".format(M))
     print("N:{}".format(N))
     theta = (np.zeros((N,1)),0)
+    print("theta.shape: {}".format(theta[0].shape))
     # Create server instance
     # S = server(initial_global_model)
     model = Model(data=(X, Y), learning_rate=args.lr, iterations=10) # 读数据加载模型
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((args.server_ip,args.port))
-    test_data_path = datasets_path.replace("train", "test")
     # print(test_data_path)
-    X_test, y_test = load_datasets(test_data_path)
     for _ in range(round):
         print("round:{}".format(_))
         # 1. train model
@@ -90,7 +93,7 @@ def lr_train():
         # 4. update theta
         # 5. repeat
 
-        new_theta = model.fit(theta)  # 训练模型
+        new_theta = model.fit(theta)  
         new_weight = pickle.dumps(new_theta)
         client_socket.sendall(new_weight)
         print("send_theta:{}".format(new_theta))

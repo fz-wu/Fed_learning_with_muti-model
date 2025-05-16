@@ -22,6 +22,8 @@ def get_dataset_path():
     args = args_parser()
     # datasets = os.path.join(os.path.dirname('fed_lr'), 'traindata.csv')
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    print(base_dir)
+    print(args.dataset)
     datasets_path = os.path.join(base_dir, '../datasets/', args.dataset)
     datasets_path = os.path.abspath(datasets_path)
     # print(datasets_path)
@@ -159,7 +161,7 @@ def load_csv(filepath, minmax=None, standardize=True, bias_term=True):
 
 # 数据集划分函数
 def split_data(test_size=0.3):
-    dataset_path = get_dataset_path() + ".csv"
+    dataset_path = get_dataset_path() 
     X, y = load_csv(dataset_path)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=None)
     return X_train, X_test, y_train, y_test, X.shape[1], len(np.unique(y))

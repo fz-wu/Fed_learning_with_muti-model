@@ -48,6 +48,7 @@ class SVMClassifier:
         return (y_pred == y).mean() * 100
 
 # 客户端训练流程
+def svm_train():
     X_train, X_test, y_train, y_test, dim, label_num = split_data()
     # assert label_num == args.label_num
     model = SVMClassifier(label_num=label_num, dim=dim)
