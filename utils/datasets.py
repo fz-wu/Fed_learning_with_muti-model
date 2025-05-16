@@ -88,7 +88,9 @@ def get_cifar_loaders_split(batch_size=64, data_dir='', client_num=1):
     return client_loaders, test_loader
 
 # 客户端 加载分割数据
-def acquire_and_load_data(dataset_name, max_clients, batch_size, data_dir='../data_split'):
+def acquire_and_load_data(dataset_name, max_clients, batch_size):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.abspath(os.path.join(script_dir, '../data_split'))
     for i in range(1, max_clients + 1):
         base_name = f"{dataset_name}_client{i}_train.pt"
         full_path = os.path.join(data_dir, base_name)
@@ -97,7 +99,6 @@ def acquire_and_load_data(dataset_name, max_clients, batch_size, data_dir='../da
             try:
                 os.rename(full_path, locked_path)
                 client_id = i
-                # print(f"[Client] 使用数据文件：{base_name}")
                 train_data = torch.load(locked_path, weights_only=False)
                 test_path = os.path.join(data_dir, f"{dataset_name}_test.pt")
                 if not os.path.exists(test_path):
@@ -111,56 +112,54 @@ def acquire_and_load_data(dataset_name, max_clients, batch_size, data_dir='../da
     raise RuntimeError("未找到可用的训练数据文件，全部已被占用。")
 
 # 服务器 对数据开展分割
-def prepare_and_save_split(dataset_name, batch_size, raw_data_dir, save_dir, client_num):
+def prepare_and_save_split(dataset_name, batch_size, client_num):
     if dataset_name == 'cifar-10':
         client_data_loaders, test_loader = get_cifar_loaders_split(
         batch_size=batch_size,
-        data_dir=raw_data_dir,
+        data_dir=get_dataset_path(),
         client_num=client_num
     )
     else:
         client_data_loaders, test_loader = get_data_loaders_split(
             batch_size=batch_size,
-            data_dir=raw_data_dir,
+            data_dir=get_dataset_path(),
             client_num=client_num
         )
+    # 构造保存路径 ../data_split
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    save_dir = os.path.abspath(os.path.join(script_dir, '../data_split'))
     os.makedirs(save_dir, exist_ok=True)
     for i, loader in enumerate(client_data_loaders):
         data = list(loader.dataset)
         save_path = os.path.join(save_dir, f"{dataset_name}_client{i+1}_train.pt")
         torch.save(data, save_path)
-        # print(f"[Server] Saved train split to {save_path}")
     test_data = list(test_loader.dataset)
     test_save_path = os.path.join(save_dir, f"{dataset_name}_test.pt")
     torch.save(test_data, test_save_path)
-    # print(f"[Server] Saved test set to {test_save_path}")
     
 
 # 加载 CSV 数据并进行归一化、标准化等预处理
-def load_csv(filepath, label_col='target', minmax=None, standardize=True, bias_term=True):
+def load_csv(filepath, minmax=None, standardize=True, bias_term=True):
     # 自动判断分隔符是 ',' 还是 ';'
     with open(filepath, 'r', encoding='utf-8') as f:
         first_line = f.readline()
         sep = ';' if ';' in first_line else ','
-
     df = pd.read_csv(filepath, sep=sep)
-    labels = df[label_col].values
-    features = df.drop(columns=[label_col]).values
-
+    labels = df.iloc[:, -1].values  # 使用最后一列作为标签
+    features = df.iloc[:, :-1].values
     if minmax is not None:
         scaler = MinMaxScaler(feature_range=minmax)
         features = scaler.fit_transform(features)
     elif standardize:
         scaler = StandardScaler()
         features = scaler.fit_transform(features)
-
     if bias_term:
         features = np.hstack([np.ones((features.shape[0], 1)), features])
-
     return features, labels
 
 # 数据集划分函数
-def split_data(dataset_path, label_col='target', test_size=0.2, random_state=42):
-    X, y = load_csv(dataset_path, label_col=label_col)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+def split_data(test_size=0.3):
+    dataset_path = get_dataset_path() + ".csv"
+    X, y = load_csv(dataset_path)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=None)
     return X_train, X_test, y_train, y_test, X.shape[1], len(np.unique(y))
