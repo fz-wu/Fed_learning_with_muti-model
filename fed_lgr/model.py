@@ -1,11 +1,11 @@
 import numpy as np
 from scipy.special import expit
-
+from scipy.special import softmax
 class LogisticRegressionModel:
     """
     Implementation of Logistic Regression for Vertical Federated Learning.
     """
-    def __init__(self, data: np.ndarray, lr: float, seed: int = 12345):
+    def __init__(self, X: np.ndarray, Y: np.ndarray, lr: float, label_num: int, seed: int = 12345):
         """
         Initialize the logistic regression model.
 
@@ -15,11 +15,13 @@ class LogisticRegressionModel:
         seed (int): Random seed for reproducibility.
         """
         np.random.seed(seed)
-        x=data
+        self.X = X
+        self.Y = Y
         self.lr = lr
-        self.m, self.n = data.shape
-        self.w = np.random.normal(loc=0.0, scale=1.0, size=(self.n, 1))
-        self.b = 0
+        self.label_num = label_num
+        self.m, self.n = X.shape
+        self.w = np.random.normal(loc=0.0, scale=1.0, size=(self.n, label_num))
+        self.b = np.zeros((1, label_num))
         self.dw = None
         self.db = None
     
@@ -28,41 +30,58 @@ class LogisticRegressionModel:
 
     def sigmoid(self, z: np.ndarray) -> np.ndarray:
         return expit(z)
-       
+
+    def softmax_fn(self, z):  # 多分类使用这个
+        return softmax(z, axis=1)
     
+    # def loss(self, y: np.ndarray, y_hat: np.ndarray) -> float:
+    #     """
+    #     Compute the logistic loss.
+    #
+    #     Parameters:
+    #     y (np.ndarray): True labels.
+    #     y_hat (np.ndarray): Predicted labels.
+    #
+    #     Returns:
+    #     float: Computed loss.
+    #     """
+    #     epsilon = 1e-15
+    #     loss = -np.mean(y * np.log(y_hat + epsilon) + (1 - y) * np.log(1 - y_hat + epsilon))
+    #     return loss
     def loss(self, y: np.ndarray, y_hat: np.ndarray) -> float:
-        """
-        Compute the logistic loss.
+        epsilon = 1e-15
+        y_hat = np.clip(y_hat, epsilon, 1 - epsilon)
+        return -np.mean(np.sum(y * np.log(y_hat), axis=1))
 
-        Parameters:
-        y (np.ndarray): True labels.
-        y_hat (np.ndarray): Predicted labels.
-
-        Returns:
-        float: Computed loss.
-        """
-        epsilon = 1e-15  
-        loss = -np.mean(y * np.log(y_hat + epsilon) + (1 - y) * np.log(1 - y_hat + epsilon))
-        return loss
-    
     def gradients(self, X: np.ndarray, diff: np.ndarray) -> tuple:
         """Compute and return the gradients."""
         dw = (1 / self.m) * np.dot(X.T, diff)
         db = (1 / self.m) * np.sum(diff)
         return dw, db
     
+    # def forward(self, x: np.ndarray) -> np.ndarray:
+    #     """Forward pass."""
+    #     self.x=x
+    #     z = np.dot(self.x, self.w) + self.b
+    #     return z
     def forward(self, x: np.ndarray) -> np.ndarray:
-        """Forward pass."""
-        self.x=x
+        self.x = x
         z = np.dot(self.x, self.w) + self.b
-        return z
+        return self.softmax_fn(z)
     
+    # def compute_diff(self, z: np.ndarray, y: np.ndarray) -> np.ndarray:
+    #     """Compute the difference between predicted and true labels."""
+    #     y_hat = self.sigmoid(z)
+    #     diff = y_hat - y
+    #     return diff
+
     def compute_diff(self, z: np.ndarray, y: np.ndarray) -> np.ndarray:
-        """Compute the difference between predicted and true labels."""
-        y_hat = self.sigmoid(z)
-        diff = y_hat - y
-        return diff
-    
+        y_hat = self.softmax_fn(z)
+        return y_hat - y
+
+    def logits(self, x: np.ndarray) -> np.ndarray:
+        return np.dot(x, self.w) + self.b
+
     def compute_gradient(self,diff: np.ndarray):
   
         self.dw, self.db = self.gradients(self.x, diff)
@@ -95,10 +114,14 @@ class LogisticRegressionModel:
     #     preds = self.sigmoid(np.dot(X, self.w) + self.b)
     #     pred_class = [1 if i > 0.5 else 0 for i in preds]
     #     return np.array(pred_class).reshape(-1, 1)
-    def predict(self, X):
+    # def predict(self, X):
+    #     z = np.dot(X, self.w) + self.b
+    #     probs = self.sigmoid(z)
+    #     return (probs >= 0.5).astype(int)
+    def predict(self, X: np.ndarray):
         z = np.dot(X, self.w) + self.b
-        probs = self.sigmoid(z)
-        return (probs >= 0.5).astype(int)
+        probs = self.softmax_fn(z)
+        return np.argmax(probs, axis=1).reshape(-1, 1)
 
 
         

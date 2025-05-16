@@ -34,7 +34,7 @@ def create_connect(client_num, port):
         client_socket.sendall(pickle.dumps(i))
     if args.model == "lgr":
         X, Y = load_datasets(get_dataset_path())
-        model = LogisticRegressionModel(X, lr=args.lr)
+        model = LogisticRegressionModel(X, Y, lr=args.lr, label_num=args.label_num)
         init_weights = (model.w, model.b)
         serialized_init = pickle.dumps(init_weights)
         for client_socket in client_sockets:
@@ -68,7 +68,7 @@ def create_connect(client_num, port):
             aggregated_weights = aggregate_svm(recved_weights)
         elif args.model == "cnn":
             aggregated_weights = aggregate_cnn(recved_weights)
-        print("Aggregated weights:", aggregated_weights)
+        # print("Aggregated weights:", aggregated_weights)
 
         # 发送聚合后的权重到所有客户端
         for client_socket in client_sockets:
@@ -107,7 +107,7 @@ def aggregate_lgr(client_data_list, model, X, Y):
     返回更新后的 (W, b)
     """
     # 初始化 z_total 向量，shape 与服务端数据一致
-    z_total = np.zeros((X.shape[0], 1))
+    z_total = np.zeros((X.shape[0], model.label_num))
 
     # 遍历每个客户端的 (ids, z_i)
     for ids, z_i in client_data_list:
@@ -117,7 +117,8 @@ def aggregate_lgr(client_data_list, model, X, Y):
         z_total[ids] += z_i
 
     # 加上服务端自己的预测 z
-    z_server = model.forward(X)
+    z_server = model.logits(X)
+    model.x = X
     z_total += z_server
 
     # 计算 diff 和更新模型
@@ -125,11 +126,15 @@ def aggregate_lgr(client_data_list, model, X, Y):
     model.compute_gradient(diff)
     model.update_model()
 
-    # 输出准确率
-    y_pred = model.predict(X)
-    acc = accuracy_score(Y, y_pred)
-    print(f"[Server] Accuracy: {acc:.4f}")
+    # y_pred = model.predict(X)
+    # acc = accuracy_score(Y, y_pred)
+    # print(f"[Server] Accuracy: {acc:.4f}")
 
+    # accuracy comparison
+    y_true = np.argmax(Y, axis=1) if Y.ndim > 1 else Y.reshape(-1)
+    y_pred = model.predict(X).reshape(-1)
+    acc = accuracy_score(y_true, y_pred)
+    print(f"[Server] Accuracy: {acc:.4f}")
     return (model.w, model.b)
 
 

@@ -5,6 +5,7 @@ import pickle
 import hashlib
 import datetime
 import numpy as np
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import StratifiedKFold
 def load_datasets(dataset_path):
     df_train = pd.read_csv(dataset_path)
@@ -35,15 +36,31 @@ def save_model_weights(model_weights):
     with open(model_path, 'wb') as f:
         pickle.dump(model_weights, f)
 
-def load_lgr_datasets(dataset_path, client_id=None, total_clients=1):
+# def load_lgr_datasets(dataset_path, client_id=None, total_clients=1):
+#     df_train = pd.read_csv(dataset_path)
+#     df_train = df_train.sample(frac=1, random_state=42).reset_index(drop=True)  # 打乱
+#
+#     if client_id is not None:
+#         # 划分数据为多个客户端子集
+#         subsets = np.array_split(df_train, total_clients)
+#         df_train = subsets[client_id]
+#
+#     X = df_train.iloc[:, :-1].values
+#     Y = df_train.iloc[:, -1:].values
+#     return X, Y
+def load_lgr_datasets(dataset_path, client_id=None, total_clients=1, label_num=2):
     df_train = pd.read_csv(dataset_path)
-    df_train = df_train.sample(frac=1, random_state=42).reset_index(drop=True)  # 打乱
+    df_train = df_train.sample(frac=1, random_state=42).reset_index(drop=True)
 
     if client_id is not None:
-        # 划分数据为多个客户端子集
         subsets = np.array_split(df_train, total_clients)
         df_train = subsets[client_id]
 
     X = df_train.iloc[:, :-1].values
     Y = df_train.iloc[:, -1:].values
+
+    if label_num > 2:
+        encoder = OneHotEncoder(sparse_output=False, categories='auto')
+        Y = encoder.fit_transform(Y)
+
     return X, Y

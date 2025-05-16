@@ -3,7 +3,7 @@ import pickle
 import socket
 import numpy as np
 from utils.options import args_parser
-
+from fed_lgr.model import LogisticRegressionModel
 args = args_parser()
 
 
@@ -47,11 +47,12 @@ def lgr_train():
     client_id = pickle.loads(client_id_data)
     datasets_path = get_dataset_path()
     X, Y = load_lgr_datasets(datasets_path, client_id=client_id, total_clients=args.client_num)
-    model = LogisticRegression(data=(X, Y), learning_rate=args.lr, iterations=10)
+    # model = LogisticRegression(data=(X, Y), learning_rate=args.lr, iterations=10)
+    model = LogisticRegressionModel(X, Y, lr=args.lr, label_num=args.label_num)
     print(f"[Client] Assigned client_id = {client_id}")
     initial_weights_data = client_socket.recv(10240)
     initial_theta = pickle.loads(initial_weights_data)
-    model.weights, model.bias = initial_theta
+    model.w, model.b = initial_theta
     print(f"[Client] Received initial weights from server.")
 
     for r in range(args.round):
@@ -64,11 +65,11 @@ def lgr_train():
                 print("[Client] No weights received from server.")
                 break
             updated_theta = pickle.loads(weights)
-            model.weights, model.bias = updated_theta
+            model.w, model.b = updated_theta
             print(f"[Client] Received updated weights and bias from server.")
 
         # Step 2: 每一轮都计算 z_i 并发送
-        z_i = np.dot(model.X, model.weights) + model.bias
+        z_i = np.dot(model.X, model.w) + model.b
         sample_ids = np.arange(client_id * len(model.X), (client_id + 1) * len(model.X))
         client_socket.sendall(pickle.dumps((sample_ids, z_i)))
         print(f"[Client] Sent z_i and sample_ids to server.")
