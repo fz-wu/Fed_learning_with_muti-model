@@ -24,13 +24,14 @@ class Model():
         self.y = data[1]
         # self.w = theta[0]
         self.w =  np.zeros((self.x.shape[1],1))
+        print("self.w:{}".format(self.w))
         self. b = 0
         self.learning_rate = learning_rate
 
         self.epochs = iterations
         
     def loss(self):
-        cost = np.sum((((self.x.dot(self.w) + self.b) - self.y) ** 2) / (2*len(self.y)))
+        cost = np.sum((((self.x.dot(self.w) + self.b) - self.y) ** 2) / (2 * len(self.y)))
         return cost
 
     def fit(self,theta):
@@ -64,21 +65,26 @@ def lr_train():
     args = args_parser()
 
     datasets_path = get_dataset_path()
+    test_data_path = datasets_path.replace("train", "test")
+
     X, Y = load_datasets(datasets_path)
+    X_test, y_test = load_datasets(test_data_path)
+
     round = args.round
-        # load env 
-    # load_dotenv(verbose=True)
-    # print(os.getenv("ip_client1",default=None))
-    # Create client instances
+    print("X:{}".format(X))
+    print("Y:{}".format(Y))
 
     M, N = X.shape
+    print("M:{}".format(M))
+    print("N:{}".format(N))
     theta = (np.zeros((N,1)),0)
+    print("theta.shape: {}".format(theta[0].shape))
     # Create server instance
     # S = server(initial_global_model)
     model = Model(data=(X, Y), learning_rate=args.lr, iterations=10) # 读数据加载模型
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((args.server_ip,args.port))
-
+    # print(test_data_path)
     for _ in range(round):
         print("round:{}".format(_))
         # 1. train model
@@ -87,7 +93,7 @@ def lr_train():
         # 4. update theta
         # 5. repeat
 
-        new_theta = model.fit(theta)  # 训练模型
+        new_theta = model.fit(theta)  
         new_weight = pickle.dumps(new_theta)
         client_socket.sendall(new_weight)
         print("send_theta:{}".format(new_theta))
@@ -98,6 +104,8 @@ def lr_train():
         weights = client_socket.recv(10240)
         theta = pickle.loads(weights)
         print("new_theta:{}".format(new_theta))
+        y_pred = predict(X_test, theta)  # Can be used to predict the testdata
+        print('The r2_score is {}'.format(r2_score(y_test,y_pred)))
         # X_test, y_test =dd.get_testdata()
         # y_pred = predict(X_test, theta)  # Can be used to predict the testdata
         # print("Acc: {}".format(r2_score(y_test,y_pred)))
@@ -106,11 +114,8 @@ def lr_train():
         # print("train_theta:{}".format(theta[0]))
         
     # theta 
-    test_data_path = datasets_path.replace("train", "test")
-    print(test_data_path)
-    X_test, y_test = load_datasets(test_data_path)
-    y_pred = predict(X_test, theta)  # Can be used to predict the testdata
-    print('The r2_score is {}'.format(r2_score(y_test,y_pred)))
+
+
     save_model_weights(theta)
     print("All round have finished. Save model weights success.")
     client_socket.close()

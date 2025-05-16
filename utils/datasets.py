@@ -10,6 +10,8 @@ from torchvision import datasets, transforms
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.model_selection import train_test_split
+import numpy as np
+from sklearn.model_selection import StratifiedKFold
 
 def load_datasets(dataset_path):
     df_train = pd.read_csv(dataset_path)
@@ -22,6 +24,8 @@ def get_dataset_path():
     args = args_parser()
     # datasets = os.path.join(os.path.dirname('fed_lr'), 'traindata.csv')
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    print(base_dir)
+    print(args.dataset)
     datasets_path = os.path.join(base_dir, '../datasets/', args.dataset)
     datasets_path = os.path.abspath(datasets_path)
     # print(datasets_path)
@@ -159,7 +163,20 @@ def load_csv(filepath, minmax=None, standardize=True, bias_term=True):
 
 # 数据集划分函数
 def split_data(test_size=0.3):
-    dataset_path = get_dataset_path() + ".csv"
+    dataset_path = get_dataset_path() 
     X, y = load_csv(dataset_path)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=None)
     return X_train, X_test, y_train, y_test, X.shape[1], len(np.unique(y))
+
+def load_lgr_datasets(dataset_path, client_id=None, total_clients=1):
+    df_train = pd.read_csv(dataset_path)
+    df_train = df_train.sample(frac=1, random_state=42).reset_index(drop=True)  # 打乱
+
+    if client_id is not None:
+        # 划分数据为多个客户端子集
+        subsets = np.array_split(df_train, total_clients)
+        df_train = subsets[client_id]
+
+    X = df_train.iloc[:, :-1].values
+    Y = df_train.iloc[:, -1:].values
+    return X, Y

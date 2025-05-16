@@ -11,3 +11,4 @@ models/*
 !datasets/.gitkeep
 !models/.gitkeep
 data_split
+.ruff_cache

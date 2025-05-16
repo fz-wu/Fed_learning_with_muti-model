@@ -51,6 +51,12 @@ This project is a multi-client federated learning application that supports line
 --epochs：客户端需指定本地训练轮数，用于控制每轮通信前的训练次数。  
 --device：客户端需指定训练设备，可选 'cpu' 或 'cuda'，默认使用 GPU（cuda）。
 如需更多参数说明，请参考 utils/options.py 文件中的 args_parser() 实现。
+### 模型推荐
+回归问题使用 线性回归
+特征复杂的二分类问题使用 SVM
+特征不太复杂的多分类问题使用 逻辑回归
+无监督数据使用 K-means
+图像分类问题使用 CNN
 
 ### CNN 图像分类模型
 

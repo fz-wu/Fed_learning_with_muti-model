@@ -5,7 +5,7 @@ import pandas as pd
 import socket
 import pickle
 from time import sleep
-from utils.transmit import recvall
+from utils.net import recvall
 from utils.datasets import save_model_weights
 from utils.options import args_parser
 from utils.datasets import load_csv, split_data

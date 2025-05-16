@@ -36,6 +36,8 @@ def client_train():
             if os.path.exists(locked_path):
                 os.rename(locked_path, original_path)
 
+
+
 if __name__ == "__main__":
     args = args_parser()
     if args.role == 'server':
