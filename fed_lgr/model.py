@@ -87,15 +87,19 @@ class LogisticRegressionModel:
         else:
             return None
     
+    # def predict(self, X):
+    #     if len(self.w.shape) == 1:
+    #         self.w = self.w.reshape(-1, 1)
+    #
+    #
+    #     preds = self.sigmoid(np.dot(X, self.w) + self.b)
+    #     pred_class = [1 if i > 0.5 else 0 for i in preds]
+    #     return np.array(pred_class).reshape(-1, 1)
     def predict(self, X):
-        if len(self.w.shape) == 1:
-            self.w = self.w.reshape(-1, 1)
+        z = np.dot(X, self.w) + self.b
+        probs = self.sigmoid(z)
+        return (probs >= 0.5).astype(int)
 
-        
-        preds = self.sigmoid(np.dot(X, self.w) + self.b)
-        pred_class = [1 if i > 0.5 else 0 for i in preds]
-        return np.array(pred_class).reshape(-1, 1)
-    
 
         
    
