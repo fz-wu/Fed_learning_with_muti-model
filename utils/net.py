@@ -4,9 +4,9 @@ import pickle
 import numpy as np
 from time import sleep
 from utils.options import args_parser
-from fed_lgr.server import Server
-from fed_lgr.model import LogisticRegressionModel
-from fed_lgr.heart_disease_dataset import get_data, get_labels
+from ..fed_lgr.server import Server
+from ..fed_lgr.model import LogisticRegressionModel
+from ..fed_lgr.heart_disease_dataset import get_data, get_labels
 import torch
 # 全局变量
 args = args_parser()
@@ -60,7 +60,7 @@ def create_connect(client_num, port):
         if args.model == "lr":
             aggregated_weights = aggregate_lr(recved_weights)
         elif args.model == "lgr":
-            aggregated_weights = aggregate_lgr(recved_weights)
+            aggregated_weights = aggregate_lgr(recved_weights, model, X, Y)
         elif args.model == "kmeans":
             aggregated_weights = aggregate_kmeans(recved_weights)
         elif args.model == "svm":
@@ -188,12 +188,12 @@ def create_connect_svm(client_num, port):
         sock.close()
 
 
-def create_lgr_connect(client_num, port, round_num):
-    global client_sockets
-    x1, x2, x3 = get_data()
-    y = get_labels().values.reshape(-1, 1)
-    server = Server(0.0001, LogisticRegressionModel, data=(x1, y))
-    N = x1.shape[0]
+# def create_lgr_connect(client_num, port, round_num):
+#     global client_sockets
+#     x1, x2, x3 = get_data()
+#     y = get_labels().values.reshape(-1, 1)
+#     server = Server(0.0001, LogisticRegressionModel, data=(x1, y))
+#     N = x1.shape[0]
 
 def aggregate_lr(weights):
 
@@ -213,9 +213,42 @@ def aggregate_kmeans(weights):
     aggregated_centers = np.mean(weights, axis=0)  # shape: (n_clusters, n_features)
     return aggregated_centers
 
-def aggregate_lgr(weights):
-    pass
+def aggregate_lgr(client_data_list, model, X, Y):
+    """
+    联邦逻辑回归的服务端聚合逻辑。
+    参数 client_data_list: [(ids, z_i), ...]
+    返回更新后的 (W, b)
+    """
+    # 初始化 z_total 向量，shape 与服务端数据一致
+    z_total = np.zeros((X.shape[0], model.label_num))
 
+    # 遍历每个客户端的 (ids, z_i)
+    for ids, z_i in client_data_list:
+        ids = ids.reshape(-1).astype(int)
+        if z_i.shape[0] != ids.shape[0]:
+            raise ValueError(f"Mismatched shape: z_i={z_i.shape}, ids={ids.shape}")
+        z_total[ids] += z_i
+
+    # 加上服务端自己的预测 z
+    z_server = model.logits(X)
+    model.x = X
+    z_total += z_server
+
+    # 计算 diff 和更新模型
+    diff = model.compute_diff(z_total, Y)
+    model.compute_gradient(diff)
+    model.update_model()
+
+    # y_pred = model.predict(X)
+    # acc = accuracy_score(Y, y_pred)
+    # print(f"[Server] Accuracy: {acc:.4f}")
+
+    # accuracy comparison
+    y_true = np.argmax(Y, axis=1) if Y.ndim > 1 else Y.reshape(-1)
+    y_pred = model.predict(X).reshape(-1)
+    acc = accuracy_score(y_true, y_pred)
+    print(f"[Server] Accuracy: {acc:.4f}")
+    return (model.w, model.b)
 # 联邦聚合函数：按客户端样本数加权平均多个权重
 def aggregate_svm(payloads):
     total_samples = sum(n for _, n in payloads)
