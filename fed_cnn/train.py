@@ -7,7 +7,7 @@ from utils.options import args_parser
 args = args_parser()
 from datetime import datetime
 import hashlib
-from utils.datasets import save_model_weights
+from utils.datasets import save_model_weights, load_datasets_cnn
 from utils.net import recvall
 
 # CNN架构: 2层卷积
@@ -85,8 +85,9 @@ class CNNModel():
         return accuracy
 
 # 模型训练 (需要调节-学习率、epochs、标签数、GPU/CPU) (完成本地训练后 本地模型进行保存)
-def cnn_train(train_loader,test_loader):
+def cnn_train():
     args = args_parser()
+    train_loader, test_loader = load_datasets_cnn(model=args.model, dataset=args.dataset, batch_size=args.batch_size)
     model = CNNModel(learning_rate=args.lr, iterations=args.epochs, num_classes=args.label_num)
     model.model.to(args.device)
 

@@ -1,84 +1,102 @@
-from utils.datasets import load_lgr_datasets, get_dataset_path, save_model_weights
-import pickle
+# logistic_regression_model.py - 联邦学习客户端多分类逻辑回归版本（Softmax）
+
 import socket
+import pickle
 import numpy as np
+import torch
+from utils.datasets import save_model_weights, load_lgr_datasets, get_dataset_path
 from utils.options import args_parser
+from utils.datasets import load_csv, split_data
 
 args = args_parser()
 
+# 多分类逻辑回归模型类（使用Softmax）
+class LogisticRegressionModel:
+    def __init__(self, input_dim, num_classes, learning_rate=0.01, iterations=10):
+        self.weights = np.zeros((input_dim, num_classes))
+        self.bias = np.zeros((1, num_classes))
+        self.lr = learning_rate
+        self.epochs = iterations
 
-class LogisticRegression:
-    def __init__(self, data, learning_rate=0.01, iterations=10):
-        self.X = data[0]
-        self.y = data[1]
-        self.X = (self.X - self.X.mean(axis=0)) / (self.X.std(axis=0) + 1e-8)
-        self.weights = np.zeros((self.X.shape[1], 1))  # 初始化权重
-        self.bias = 0
-        self.learning_rate = learning_rate
-        self.iterations = iterations
+    def softmax(self, z):
+        exp_z = np.exp(z - np.max(z, axis=1, keepdims=True))
+        return exp_z / np.sum(exp_z, axis=1, keepdims=True)
 
-    def sigmoid(self, z):
-        return 1 / (1 + np.exp(-z))  # Sigmoid 函数
-
-    def loss(self):
-        m = self.y.shape[0]
-        cost = -(1 / m) * np.sum(self.y * np.log(self.sigmoid(self.X.dot(self.weights) + self.bias)) +
-                                 (1 - self.y) * np.log(1 - self.sigmoid(self.X.dot(self.weights) + self.bias)))
+    def loss(self, X, y):
+        m = X.shape[0]
+        z = X @ self.weights + self.bias
+        probs = self.softmax(z)
+        log_probs = -np.log(probs[np.arange(m), y.flatten().astype(int)] + 1e-8)
+        cost = np.mean(log_probs)
         return cost
 
-    def fit(self):
-        m = self.X.shape[0]
-        for i in range(self.iterations):
-            z = np.dot(self.X, self.weights) + self.bias
-            prediction = self.sigmoid(z)
-            dw = (1 / m) * np.dot(self.X.T, (prediction - self.y))  # 计算梯度
-            db = (1 / m) * np.sum(prediction - self.y)
-            self.weights -= self.learning_rate * dw  # 更新权重
-            self.bias -= self.learning_rate * db  # 更新偏置
-        return self.weights, self.bias  # 返回更新后的权重和偏置
+    def fit(self, X, y):
+        m = X.shape[0]
+        unique_labels = np.unique(y)
+        label_map = {v: i for i, v in enumerate(unique_labels)}
+        y_mapped = np.vectorize(label_map.get)(y.flatten())
+        y_onehot = np.eye(self.weights.shape[1])[y_mapped]
+        for _ in range(self.epochs):
+            z = X @ self.weights + self.bias
+            probs = self.softmax(z)
+            dz = probs - y_onehot
+            dw = (1 / m) * X.T @ dz
+            db = (1 / m) * np.sum(dz, axis=0, keepdims=True)
+            self.weights -= self.lr * dw
+            self.bias -= self.lr * db
+        return self.weights, self.bias
 
+    def evaluate(self, X, y):
+        probs = self.softmax(X @ self.weights + self.bias)
+        preds = np.argmax(probs, axis=1)
+        accuracy = (preds == y.flatten()).mean() * 100
+        print(f"Test Accuracy: {accuracy:.2f}%")
+        return accuracy
 
+# 本地训练与通信
 def lgr_train():
+    # 加载并划分数据
+    X_train, X_test, y_train, y_test, dim, label_num = split_data()
+    print(f'label_num,{label_num}')
+    # assert label_num == args.label_num
+    X_train = (X_train - X_train.mean(axis=0)) / (X_train.std(axis=0) + 1e-8)
+    X_test = (X_test - X_test.mean(axis=0)) / (X_test.std(axis=0) + 1e-8)
+
+    model = LogisticRegressionModel(input_dim=dim, num_classes=label_num,
+                                    learning_rate=args.lr, iterations=args.epochs)
+
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((args.server_ip, args.port))
 
-    # 接收自己的 client_id
-    client_id_data = client_socket.recv(1024)
-    client_id = pickle.loads(client_id_data)
-    datasets_path = get_dataset_path()
-    X, Y = load_lgr_datasets(datasets_path, client_id=client_id, total_clients=args.client_num)
-    model = LogisticRegression(data=(X, Y), learning_rate=args.lr, iterations=10)
-    print(f"[Client] Assigned client_id = {client_id}")
-    initial_weights_data = client_socket.recv(10240)
-    initial_theta = pickle.loads(initial_weights_data)
-    model.weights, model.bias = initial_theta
-    print(f"[Client] Received initial weights from server.")
+    for round in range(args.round):
+        print(f"\nRound {round + 1}")
 
-    for r in range(args.round):
-        print(f"[Client] Round {r}")
+        # 本地训练
+        weights, bias = model.fit(X_train, y_train)
+        model.evaluate(X_test, y_test)
 
-        # Step 1: 从第1轮起接收服务端模型参数
-        if r > 0:
-            weights = client_socket.recv(10240)
-            if not weights:
-                print("[Client] No weights received from server.")
-                break
-            updated_theta = pickle.loads(weights)
-            model.weights, model.bias = updated_theta
-            print(f"[Client] Received updated weights and bias from server.")
+        # 打包并发送本地模型参数
+        payload = {
+            'weights': (weights, bias),
+            'num_samples': len(X_train)
+        }
+        serialized = pickle.dumps(payload)
+        client_socket.sendall(len(serialized).to_bytes(4, 'big'))
+        client_socket.sendall(serialized)
+        print("Sent weights and sample count to server.")
 
-        # Step 2: 每一轮都计算 z_i 并发送
-        z_i = np.dot(model.X, model.weights) + model.bias
-        sample_ids = np.arange(client_id * len(model.X), (client_id + 1) * len(model.X))
-        client_socket.sendall(pickle.dumps((sample_ids, z_i)))
-        print(f"[Client] Sent z_i and sample_ids to server.")
+        # 接收聚合模型
+        try:
+            length_data = client_socket.recv(4)
+            total_length = int.from_bytes(length_data, 'big')
+            serialized_model = client_socket.recv(total_length)
+            w_new, b_new = pickle.loads(serialized_model)
+            model.weights = w_new
+            model.bias = b_new
+            print("Updated model from server.")
+        except Exception as e:
+            print(f"Error receiving updated model: {e}")
+            break
 
-        # 最后一轮也接收一次用于保存
-    final_weights = client_socket.recv(10240)
-    if final_weights:
-        final_theta = pickle.loads(final_weights)
-        model.weights, model.bias = final_theta
-        print(f"[Client] Final weights received. Saving model.")
-        save_model_weights(final_theta)
-    # 保存模型权重
+    save_model_weights((model.weights, model.bias))
     client_socket.close()
