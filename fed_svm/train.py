@@ -27,7 +27,7 @@ class SVMClassifier:
         grad = -np.sum((y[mask][:, None]) * X[mask], axis=0)
         return grad
 
-    def train_ovr(self, X, y, lr=0.01, epochs=100):
+    def train_ovr(self, X, y, lr=0.01, epochs=10):
         # 使用 One-vs-Rest 策略训练多分类 SVM 模型
         for c in range(self.label_num):
             y_binary = np.where(y == c, 1, -1)  # 当前类为 1，其他类为 -1
@@ -49,7 +49,7 @@ class SVMClassifier:
 
 # 客户端训练流程
 def svm_train():
-    X_train, X_test, y_train, y_test, dim, label_num = split_data(f"./datasets/{args.dataset}.csv", label_col='target')
+    X_train, X_test, y_train, y_test, dim, label_num = split_data()
     # assert label_num == args.label_num
     model = SVMClassifier(label_num=label_num, dim=dim)
 

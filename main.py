@@ -27,7 +27,7 @@ def client_train():
     elif args.model == 'cnn':
         try:
             # 数据获取
-            client_id, train_loader, test_loader, locked_path, original_path = acquire_and_load_data(dataset_name=args.dataset, max_clients=args.client_num, batch_size=args.batch_size, data_dir='./data_split')
+            client_id, train_loader, test_loader, locked_path, original_path = acquire_and_load_data(dataset_name=args.dataset, max_clients=args.client_num, batch_size=args.batch_size)
             print(f"[Client {client_id}] Data loading completed")
             # 开展本地训练
             cnn_train(train_loader=train_loader, test_loader=test_loader)
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         # server() 10000 is the port number
         if args.model == 'cnn':
             # 数据划分
-            prepare_and_save_split(dataset_name=args.dataset, batch_size=args.batch_size, raw_data_dir=f'./datasets/{args.dataset}', save_dir='./data_split', client_num=args.client_num)
+            prepare_and_save_split(dataset_name=args.dataset, batch_size=args.batch_size, client_num=args.client_num)
             print('Data segmentation completed')
             # 服务器运行
             create_connect_cnn(args.client_num, args.port)
