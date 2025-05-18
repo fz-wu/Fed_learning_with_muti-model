@@ -4,9 +4,9 @@ import pickle
 import numpy as np
 from time import sleep
 from utils.options import args_parser
-from ..fed_lgr.server import Server
-from ..fed_lgr.model import LogisticRegressionModel
-from ..fed_lgr.heart_disease_dataset import get_data, get_labels
+# from ..fed_lgr.server import Server
+# from ..fed_lgr.model import LogisticRegressionModel
+# from ..fed_lgr.heart_disease_dataset import get_data, get_labels
 import torch
 # 全局变量
 args = args_parser()
@@ -60,7 +60,8 @@ def create_connect(client_num, port):
         if args.model == "lr":
             aggregated_weights = aggregate_lr(recved_weights)
         elif args.model == "lgr":
-            aggregated_weights = aggregate_lgr(recved_weights, model, X, Y)
+            # aggregated_weights = aggregate_lgr(recved_weights, model, X, Y)
+            pass
         elif args.model == "kmeans":
             aggregated_weights = aggregate_kmeans(recved_weights)
         elif args.model == "svm":

@@ -3,20 +3,20 @@ from utils.net import create_connect, create_connect_cnn, create_connect_svm
 
 from fed_lr.train import lr_train
 from fed_lgr.train import lgr_train
-# from fed_kmeans.train import kmeans_train
-# from fed_svm.main import svm_train
+from fed_kmeans.train import kmeans_train
 from fed_svm.train import svm_train
 from fed_cnn.train import cnn_train
 import os 
 from utils.datasets import acquire_and_load_data, prepare_and_save_split
-
+print("主文件已加载")
 
 def client_train():
     args = args_parser()
     if args.model == 'lr':
         lr_train()
     elif args.model == 'lgr':
-        lgr_train()
+        # lgr_train()
+        pass
     elif args.model == 'kmeans':
         print("kmeans")
         # kmeans_train()
@@ -40,13 +40,13 @@ def client_train():
 
 if __name__ == "__main__":
     args = args_parser()
+    print("args:", args)
     if args.role == 'server':
         # Start the server
         print("Starting listening server...")
-        # server() 10000 is the port number
         if args.model == 'cnn':
             # 数据划分
-            prepare_and_save_split(dataset_name=args.dataset, batch_size=args.batch_size, client_num=args.client_num)
+            # prepare_and_save_split(dataset_name=args.dataset, batch_size=args.batch_size, client_num=args.client_num)
             print('Data segmentation completed')
             # 服务器运行
             create_connect_cnn(args.client_num, args.port)
