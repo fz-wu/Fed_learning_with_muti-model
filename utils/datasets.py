@@ -39,7 +39,7 @@ def get_log_path():
     hash_str = str(hash_object.hexdigest()[:6])
     base_dir = os.path.dirname(os.path.abspath(__file__))
     log_path = os.path.join(base_dir, '../logs/', log_name + "_" + str(today) + "_" + now_time +  "_" +  hash_str +  ".log")
-    return os.path.abspath(os.path.join(base_dir, '../logs/'+ log_path))
+    return os.path.abspath(log_path)
 
 def save_model_weights(model_weights):
     args = args_parser()
