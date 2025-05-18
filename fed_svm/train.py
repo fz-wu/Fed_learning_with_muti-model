@@ -5,14 +5,19 @@ import pandas as pd
 import socket
 import pickle
 from time import sleep
+import logging
+
 from utils.net import recvall
 from utils.datasets import save_model_weights
 from utils.options import args_parser
-from utils.datasets import load_csv, split_data
+from utils.datasets import load_csv, split_data, get_log_path
 
 args = args_parser()
 
-# SVM 模型封装类
+logging.basicConfig(level=logging.INFO, filename=get_log_path(),format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
 class SVMClassifier:
     def __init__(self, label_num, dim):
         # 初始化模型，创建用于多分类的每类一个权重向量
@@ -58,10 +63,11 @@ def svm_train():
 
     for round in range(args.round):
         print(f"\n[Round {round + 1}]")
+        logger.info(f"\n[Round {round + 1}]")
         model.train_ovr(X_train, y_train, lr=args.lr, epochs=args.epochs)
         acc = model.accuracy(X_test, y_test)
         print(f"Test Accuracy: {acc:.2f}%")
-
+        logger.info(f"Test Accuracy: {acc:.2f}%")
         payload = {
             'weights': model.weights,
             'num_samples': len(X_train)
@@ -71,15 +77,17 @@ def svm_train():
         client_socket.sendall(len(serialized_payload).to_bytes(4, byteorder='big'))
         client_socket.sendall(serialized_payload)
         print("Sent model weights and sample count to server.")
-
+        logger.info("Sent model weights and sample count to server.")
         try:
             length_data = recvall(client_socket, 4)
             total_length = int.from_bytes(length_data, byteorder='big')
             serialized_weights = recvall(client_socket, total_length)
             model.weights = pickle.loads(serialized_weights)
             print("Updated model from server.")
+            logger.info("Updated model from server.")
         except Exception as e:
             print(f"Error receiving updated weights: {e}")
+            logger.error(f"Error receiving updated weights: {e}")
             break
 
     save_model_weights(model.weights)

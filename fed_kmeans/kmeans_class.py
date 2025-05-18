@@ -21,13 +21,17 @@ from sklearn.cluster._kmeans import (
     _is_arraylike_not_scalar,  # 补充此行
 )
 from utils.options import args_parser
-
+from utils.datasets import get_log_path
+import logging
 try:
     from sklearn.utils._openmp_helpers import _openmp_effective_n_threads
 except ImportError:
     def _openmp_effective_n_threads():
         return 1
 
+
+logging.basicConfig(level=logging.INFO, filename=get_log_path(),format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 def _kmeans_single_elkan(
     X,
     sample_weight,
@@ -128,6 +132,7 @@ def _kmeans_single_elkan(
 
     for i in range(max_iter):
         print("round={}".format(i))
+        logger.info("round={}".format(i))
 
         elkan_iter(
             X,
@@ -154,6 +159,7 @@ def _kmeans_single_elkan(
         if verbose:
             inertia = _inertia(X, sample_weight, centers, labels, n_threads)
             print(f"Iteration {i}, inertia {inertia}")
+            
 
         centers, centers_new = centers_new, centers
         new_weight = pickle.dumps(centers_new)
@@ -167,6 +173,7 @@ def _kmeans_single_elkan(
         weights = client_socket.recv(10240)
         centers_new = pickle.loads(weights)
         print("new_centers: {}".format(centers))
+        logger.info("new_centers: {}".format(centers_new))
         # if np.array_equal(labels, labels_old):
         #     # First check the labels for strict convergence.
         #     if verbose:
@@ -292,6 +299,7 @@ class FedKMeans(KMeans):
                 )
                 if self.verbose:
                     print("Initialization complete")
+                    logger.info("Initialization complete")
 
                 # run a k-means once
                 labels, inertia, centers, n_iter_ = kmeans_single(

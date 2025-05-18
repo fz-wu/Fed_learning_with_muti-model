@@ -1,11 +1,18 @@
+from math import log
 import socket
 import threading
 import pickle
 import numpy as np
 from time import sleep
 from utils.options import args_parser
+from utils.datasets import get_log_path
+import logging
+
+
+logging.basicConfig(level=logging.INFO, filename=get_log_path(),format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 # from ..fed_lgr.server import Server
-# from ..fed_lgr.model import LogisticRegressionModel
+# from fed_lgr.model import LogisticRegressionModel
 # from ..fed_lgr.heart_disease_dataset import get_data, get_labels
 import torch
 # 全局变量
@@ -35,25 +42,30 @@ def create_connect(client_num, port):
     server_socket.listen(client_num)
     print("client number = {}".format(client_num))
     print('Waiting for connection...')
+    logger.info("client number = {}".format(client_num))
+    logger.info('Waiting for connection...')
 
     for _ in range(client_num):
         client_socket, client_addr = server_socket.accept()
         client_sockets.append(client_socket)
         print("client_addr: {}".format(client_addr))
-
+        logger.info("client_addr: {}".format(client_addr))
     for round in range(NUM_ROUNDS):
         print(f"Starting aggregation round {round + 1}...")
+        logger.info(f"Starting aggregation round {round + 1}...")
         sleep(1)
         print("All clients connected. Starting aggregation...")
-        # 接收所有权重
+        logger.info("All clients connected. Starting aggregation...")
         recved_weights = []
         for client_socket in client_sockets:
             serialized_clinet_weight = client_socket.recv(102400)
             if not serialized_clinet_weight:
                 print("Warning: received empty data from client", client_socket.getpeername())
+                logger.warning("Warning: received empty data from client {}".format(client_socket.getpeername()))
                 continue
             client_weight = pickle.loads(serialized_clinet_weight)
             print("Received weight from client {}: {}".format(client_socket.getpeername(),client_weights))
+            logger.info("Received weight from client {}: {}".format(client_socket.getpeername(), client_weight))
             recved_weights.append(client_weight) # 等待客户端发送权重
 
         print("recved_client_weights:{}".format(recved_weights))
@@ -70,15 +82,17 @@ def create_connect(client_num, port):
             aggregated_weights = aggregate_cnn(recved_weights)
         
         print("Aggregated weights:", aggregated_weights)
-
+        logger.info("Aggregated weights: {}".format(aggregated_weights))
         # 发送聚合后的权重到所有客户端
         for client_socket in client_sockets:
             try:
                 serialized_weights = pickle.dumps(aggregated_weights)
                 client_socket.sendall(serialized_weights)
                 print("Sent aggregated weights to client {}.".format(client_socket.getpeername()))
+                logger.info("Sent aggregated weights to client {}.".format(client_socket.getpeername()))
             except Exception as e:
                 print("Error sending weights to client:", e)
+                logger.error("Error sending weights to client {}: {}".format(client_socket.getpeername(), e))
 
         print("Weights sent to all clients. Ready for the next round.")
     print("All rounds completed. Closing server socket.")
@@ -93,7 +107,7 @@ def create_connect_cnn(client_num, port):
     server_socket.listen(client_num)
     print(f"client number = {client_num}")
     print('Waiting for connection...')
-
+    logger.info('Waiting for connection...')
     for _ in range(client_num):
         client_socket, client_addr = server_socket.accept()
         client_sockets.append(client_socket)
@@ -101,6 +115,7 @@ def create_connect_cnn(client_num, port):
 
     for round in range(NUM_ROUNDS):
         print(f"\nStarting aggregation round {round + 1}...")
+        logger.info(f"\nStarting aggregation round {round + 1}...")
         sleep(1)
         recved_payloads = []
         for client_socket in client_sockets:
@@ -116,8 +131,12 @@ def create_connect_cnn(client_num, port):
                 sample_num = payload['num_samples']
                 recved_payloads.append((client_weight, sample_num))
                 print(f"Received weight and sample count ({sample_num}) from client {client_socket.getpeername()}.")
+                logger.info(f"Received weight and sample count ({sample_num}) from client {client_socket.getpeername()}.")
+
             except Exception as e:
                 print(f"Error receiving data from client {client_socket.getpeername()}: {e}")
+                logger.error(f"Error receiving data from client {client_socket.getpeername()}: {e}")
+
         # 聚合 [(weight, sample_num), ...]
         aggregated_weights = aggregate_cnn(recved_payloads)
         for client_socket in client_sockets:
@@ -127,10 +146,14 @@ def create_connect_cnn(client_num, port):
                 client_socket.sendall(data_length.to_bytes(4, byteorder='big'))
                 client_socket.sendall(serialized_weights)
                 print(f"Sent aggregated weights to client {client_socket.getpeername()}.")
+                logger.info(f"Sent aggregated weights to client {client_socket.getpeername()}.")
             except Exception as e:
                 print(f"Error sending weights to client {client_socket.getpeername()}: {e}")
+                logger.error(f"Error sending weights to client {client_socket.getpeername()}: {e}")
         print("Weights sent to all clients. Ready for the next round.")
+        logger.info("Weights sent to all clients. Ready for the next round.")
     print("All rounds completed. Closing server socket.")
+    logger.info("All rounds completed. Closing server socket.")
     server_socket.close()
     for sock in client_sockets:
         sock.close()
@@ -146,14 +169,16 @@ def create_connect_svm(client_num, port):
     server_socket.listen(client_num)
     print(f"client number = {client_num}")
     print('Waiting for connection...')
+    logger.info('Waiting for connection...')
 
     for _ in range(client_num):
         client_socket, client_addr = server_socket.accept()
         client_sockets.append(client_socket)
         print(f"client_addr: {client_addr}")
-
+        logger.info(f"client_addr: {client_addr}")
     for round in range(NUM_ROUNDS):
         print(f"\nStarting aggregation round {round + 1}...")
+        logger.info(f"\nStarting aggregation round {round + 1}...")
         sleep(1)
         recved_payloads = []
         for client_socket in client_sockets:
@@ -166,9 +191,10 @@ def create_connect_svm(client_num, port):
                 sample_num = payload['num_samples']
                 recved_payloads.append((client_weight, sample_num))
                 print(f"Received weights and sample count ({sample_num}) from client {client_socket.getpeername()}.")
+                logger.info(f"Received weights and sample count ({sample_num}) from client {client_socket.getpeername()}.")
             except Exception as e:
                 print(f"Error receiving data from client {client_socket.getpeername()}: {e}")
-
+                logger.error(f"Error receiving data from client {client_socket.getpeername()}: {e}")
         aggregated_weights = aggregate_svm(recved_payloads)
 
         for client_socket in client_sockets:
@@ -178,16 +204,67 @@ def create_connect_svm(client_num, port):
                 client_socket.sendall(data_length.to_bytes(4, byteorder='big'))
                 client_socket.sendall(serialized_weights)
                 print(f"Sent aggregated weights to client {client_socket.getpeername()}.")
+                logger.info(f"Sent aggregated weights to client {client_socket.getpeername()}.")
             except Exception as e:
                 print(f"Error sending weights to client {client_socket.getpeername()}: {e}")
+                logger.error(f"Error sending weights to client {client_socket.getpeername()}: {e}")
 
         print("Weights sent to all clients. Ready for the next round.")
+        logger.info("Weights sent to all clients. Ready for the next round.")
 
     print("All rounds completed. Closing server socket.")
     server_socket.close()
     for sock in client_sockets:
         sock.close()
 
+# 联邦服务端连接逻辑回归客户端
+def create_connect_lgr(client_num, port):
+    client_sockets = []
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind(("0.0.0.0", port))
+    server_socket.listen(client_num)
+    print(f"[Server] Listening for {client_num} clients on port {port}...")
+    for _ in range(client_num):
+        sock, addr = server_socket.accept()
+        client_sockets.append(sock)
+        print(f"[Server] Connected to client {addr}")
+        logger.info(f"[Server] Connected to client {addr}")
+    for r in range(args.round):
+        print(f"[Server] Round {r + 1}")
+        logger.info(f"[Server] Round {r + 1}")
+        recved_payloads = []
+        for sock in client_sockets:
+            try:
+                length_data = sock.recv(4)
+                total_length = int.from_bytes(length_data, 'big')
+                serialized_data = b''
+                while len(serialized_data) < total_length:
+                    serialized_data += sock.recv(total_length - len(serialized_data))
+                payload = pickle.loads(serialized_data)
+                recved_payloads.append((payload['weights'], payload['num_samples']))
+                print(f"[Server] Received weights from {sock.getpeername()}")
+                logger.info(f"[Server] Received weights from {sock.getpeername()}")
+            except Exception as e:
+                print(f"[Server] Error receiving from client: {e}")
+                logger.error(f"[Server] Error receiving from client {sock.getpeername()}: {e}")
+
+        aggregated = aggregate_lgr(recved_payloads)
+        serialized_weights = pickle.dumps(aggregated)
+        for sock in client_sockets:
+            try:
+                sock.sendall(len(serialized_weights).to_bytes(4, 'big'))
+                sock.sendall(serialized_weights)
+                print(f"[Server] Sent aggregated weights to {sock.getpeername()}")
+                logger.info(f"[Server] Sent aggregated weights to {sock.getpeername()}")
+            except Exception as e:
+                print(f"[Server] Error sending to client: {e}")
+                logger.error(f"[Server] Error sending to client {sock.getpeername()}: {e}")
+    print("[Server] All rounds completed. Closing server socket.")
+    logger.info("[Server] All rounds completed. Closing server socket.")
+    server_socket.close()
+    for sock in client_sockets:
+        sock.close()
 
 # def create_lgr_connect(client_num, port, round_num):
 #     global client_sockets
@@ -214,42 +291,59 @@ def aggregate_kmeans(weights):
     aggregated_centers = np.mean(weights, axis=0)  # shape: (n_clusters, n_features)
     return aggregated_centers
 
-def aggregate_lgr(client_data_list, model, X, Y):
-    """
-    联邦逻辑回归的服务端聚合逻辑。
-    参数 client_data_list: [(ids, z_i), ...]
-    返回更新后的 (W, b)
-    """
-    # 初始化 z_total 向量，shape 与服务端数据一致
-    z_total = np.zeros((X.shape[0], model.label_num))
+# def aggregate_lgr(client_data_list, model, X, Y):
+#     """
+#     联邦逻辑回归的服务端聚合逻辑。
+#     参数 client_data_list: [(ids, z_i), ...]
+#     返回更新后的 (W, b)
+#     """
+#     # 初始化 z_total 向量，shape 与服务端数据一致
+#     z_total = np.zeros((X.shape[0], model.label_num))
 
-    # 遍历每个客户端的 (ids, z_i)
-    for ids, z_i in client_data_list:
-        ids = ids.reshape(-1).astype(int)
-        if z_i.shape[0] != ids.shape[0]:
-            raise ValueError(f"Mismatched shape: z_i={z_i.shape}, ids={ids.shape}")
-        z_total[ids] += z_i
+#     # 遍历每个客户端的 (ids, z_i)
+#     for ids, z_i in client_data_list:
+#         ids = ids.reshape(-1).astype(int)
+#         if z_i.shape[0] != ids.shape[0]:
+#             raise ValueError(f"Mismatched shape: z_i={z_i.shape}, ids={ids.shape}")
+#         z_total[ids] += z_i
 
-    # 加上服务端自己的预测 z
-    z_server = model.logits(X)
-    model.x = X
-    z_total += z_server
+#     # 加上服务端自己的预测 z
+#     z_server = model.logits(X)
+#     model.x = X
+#     z_total += z_server
 
-    # 计算 diff 和更新模型
-    diff = model.compute_diff(z_total, Y)
-    model.compute_gradient(diff)
-    model.update_model()
+#     # 计算 diff 和更新模型
+#     diff = model.compute_diff(z_total, Y)
+#     model.compute_gradient(diff)
+#     model.update_model()
 
-    # y_pred = model.predict(X)
-    # acc = accuracy_score(Y, y_pred)
-    # print(f"[Server] Accuracy: {acc:.4f}")
+#     # y_pred = model.predict(X)
+#     # acc = accuracy_score(Y, y_pred)
+#     # print(f"[Server] Accuracy: {acc:.4f}")
 
-    # accuracy comparison
-    y_true = np.argmax(Y, axis=1) if Y.ndim > 1 else Y.reshape(-1)
-    y_pred = model.predict(X).reshape(-1)
-    acc = accuracy_score(y_true, y_pred)
-    print(f"[Server] Accuracy: {acc:.4f}")
-    return (model.w, model.b)
+#     # accuracy comparison
+#     y_true = np.argmax(Y, axis=1) if Y.ndim > 1 else Y.reshape(-1)
+#     y_pred = model.predict(X).reshape(-1)
+#     acc = accuracy_score(y_true, y_pred)
+#     print(f"[Server] Accuracy: {acc:.4f}")
+#     return (model.w, model.b)
+
+# 联邦服务端聚合函数
+def aggregate_lgr(payloads):
+    total_samples = sum(n for _, n in payloads)
+    num_classes = payloads[0][0][1].shape[1] if len(payloads[0][0][1].shape) > 1 else 1
+    weight_shape = payloads[0][0][0].shape
+    bias_shape = payloads[0][0][1].shape
+
+    agg_weights = np.zeros(weight_shape)
+    agg_bias = np.zeros(bias_shape)
+
+    for (w, b), n in payloads:
+        agg_weights += w * (n / total_samples)
+        agg_bias += b * (n / total_samples)
+
+    return agg_weights, agg_bias
+
 # 联邦聚合函数：按客户端样本数加权平均多个权重
 def aggregate_svm(payloads):
     total_samples = sum(n for _, n in payloads)
@@ -281,5 +375,4 @@ def send_weights(target_host, port, weights):
     new_weight = sock.recv(102400)
     new_weight = pickle.loads(new_weight)
     print("client_weight:{}".format(new_weight))
-    # sock.close()
     return new_weight

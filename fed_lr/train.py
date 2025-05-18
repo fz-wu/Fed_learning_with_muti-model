@@ -1,22 +1,21 @@
 from json import load
+from math import log
 import pandas as pd
 import numpy as np
 from sklearn.metrics import r2_score, accuracy_score
 import socket
-
-from utils.datasets import load_datasets, get_dataset_path, save_model_weights
-from utils.options import args_parser
-args = args_parser()
-
-# from client import Participant
-# from server import server
-# import  dataset as dd
+import logging
 import pickle
 
+from utils.datasets import load_datasets, get_dataset_path, save_model_weights, get_log_path
+from utils.options import args_parser
 
-# Local Data for Each Clients
-# M, N = client1_localdata[0].shape
 
+logging.basicConfig(level=logging.INFO, filename=get_log_path(),format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
+args = args_parser()
 class Model():
     
     def __init__( self, data, learning_rate=0.001, iterations=10) :
@@ -24,7 +23,6 @@ class Model():
         self.y = data[1]
         # self.w = theta[0]
         self.w =  np.zeros((self.x.shape[1],1))
-        print("self.w:{}".format(self.w))
         self. b = 0
         self.learning_rate = learning_rate
 
@@ -71,14 +69,11 @@ def lr_train():
     X_test, y_test = load_datasets(test_data_path)
 
     round = args.round
-    print("X:{}".format(X))
-    print("Y:{}".format(Y))
 
     M, N = X.shape
-    print("M:{}".format(M))
-    print("N:{}".format(N))
     theta = (np.zeros((N,1)),0)
     print("theta.shape: {}".format(theta[0].shape))
+    logger.info("theta.shape: {}".format(theta[0].shape))
     # Create server instance
     # S = server(initial_global_model)
     model = Model(data=(X, Y), learning_rate=args.lr, iterations=10) # 读数据加载模型
@@ -87,6 +82,7 @@ def lr_train():
     # print(test_data_path)
     for _ in range(round):
         print("round:{}".format(_))
+        logger.info("round:{}".format(_))
         # 1. train model
         # 2. send theta to server
         # 3. receive theta from server
@@ -97,15 +93,17 @@ def lr_train():
         new_weight = pickle.dumps(new_theta)
         client_socket.sendall(new_weight)
         print("send_theta:{}".format(new_theta))
-
+        logger.info("send_theta:{}".format(new_theta))
         # print("theta:{}".format(theta))
 
         # 1. receive theta from server
         weights = client_socket.recv(10240)
         theta = pickle.loads(weights)
         print("new_theta:{}".format(new_theta))
+        logger.info("new_theta:{}".format(new_theta))
         y_pred = predict(X_test, theta)  # Can be used to predict the testdata
         print('The r2_score is {}'.format(r2_score(y_test,y_pred)))
+        logger.info('The r2_score is {}'.format(r2_score(y_test,y_pred)))
         # X_test, y_test =dd.get_testdata()
         # y_pred = predict(X_test, theta)  # Can be used to predict the testdata
         # print("Acc: {}".format(r2_score(y_test,y_pred)))
@@ -118,5 +116,7 @@ def lr_train():
 
     save_model_weights(theta)
     print("All round have finished. Save model weights success.")
+    logger.info("All round have finished. Save model weights success.")
     client_socket.close()
     print("close socket")
+    logger.info("close socket")

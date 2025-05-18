@@ -1,14 +1,18 @@
-from json import load
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from utils.datasets import load_datasets, get_dataset_path
+# from json import load
+# from sklearn.datasets import load_iris
+# from sklearn.model_selection import train_test_split
 # 数据标准化
 from sklearn.preprocessing import StandardScaler
-
-import numpy as np
+import logging
+# import numpy as np
 from .kmeans_class import FedKMeans
 from utils.options import args_parser
-from utils.datasets import save_model_weights
+from utils.datasets import save_model_weights,get_log_path, load_datasets, get_dataset_path
+
+
+logging.basicConfig(level=logging.INFO, filename=get_log_path(),format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 def kmeans_train():
     args = args_parser()
     # iris = load_iris()
@@ -18,9 +22,10 @@ def kmeans_train():
     transfer = StandardScaler()
     x_train = transfer.fit_transform(X)
     # x_test = transfer.transform(x_test)
-    kmeans = FedKMeans(n_clusters=args.label_num, random_state=1, max_iter=args.round).fit(X)
+    kmeans = FedKMeans(n_clusters=args.label_num, random_state=1, max_iter=args.round).fit(x_train)
     # print(X.shape)
     print("All round already finished.")
+    logger.info("All round already finished.")
     # print(kmeans.labels_)
     # is_same = zip(kmeans.labels_, y_train)
     # out = []

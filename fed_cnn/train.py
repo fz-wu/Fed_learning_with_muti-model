@@ -3,13 +3,13 @@ import torch.nn as nn
 import torch.optim as optim
 import socket
 import pickle
-from utils.options import args_parser
-args = args_parser()
-from datetime import datetime
-import hashlib
-from utils.datasets import save_model_weights
-from utils.net import recvall
+import logging
 
+from utils.options import args_parser
+from utils.datasets import save_model_weights, load_datasets_cnn, get_log_path
+from utils.net import recvall
+logging.basicConfig(level=logging.INFO, filename=get_log_path(),format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 # CNN架构: 2层卷积
 class CNN(nn.Module):
     def __init__(self, input_channels=3, num_classes=10):
@@ -82,11 +82,13 @@ class CNNModel():
                 correct += (predicted == target).sum().item()
         accuracy = 100.0 * correct / total
         print(f"Test Accuracy: {accuracy:.2f}%")
+        logger.info(f"Test Accuracy: {accuracy:.2f}%")
         return accuracy
 
 # 模型训练 (需要调节-学习率、epochs、标签数、GPU/CPU) (完成本地训练后 本地模型进行保存)
-def cnn_train(train_loader,test_loader):
+def cnn_train():
     args = args_parser()
+    train_loader, test_loader = load_datasets_cnn(model=args.model, dataset=args.dataset, batch_size=args.batch_size)
     model = CNNModel(learning_rate=args.lr, iterations=args.epochs, num_classes=args.label_num)
     model.model.to(args.device)
 
@@ -95,7 +97,7 @@ def cnn_train(train_loader,test_loader):
 
     for round in range(args.round):
         print(f"\nRound {round + 1}")
-
+        logger.info(f"\nRound {round + 1}")
         # 本地训练
         new_theta = model.fit(train_loader, args.device)
         model.evaluate(test_loader, args.device)
@@ -115,7 +117,7 @@ def cnn_train(train_loader,test_loader):
         client_socket.sendall(data_length.to_bytes(4, byteorder='big'))
         client_socket.sendall(serialized_payload)
         print(f"Sent weights and sample count ({local_sample_num}) to server.")
-
+        logger.info(f"Sent weights and sample count ({local_sample_num}) to server.")
         try:
             length_data = recvall(client_socket, 4)
             total_length = int.from_bytes(length_data, byteorder='big')
@@ -123,8 +125,10 @@ def cnn_train(train_loader,test_loader):
             theta = pickle.loads(serialized_weights)
             model.model.load_state_dict(theta)
             print("Updated model from server.")
+            logger.info("Updated model from server.")
         except Exception as e:
             print(f"Error receiving updated weights: {e}")
+            logger.info(f"Error receiving updated weights: {e}")
 
     save_model_weights(model.model.state_dict())
     client_socket.close()
