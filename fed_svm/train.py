@@ -50,7 +50,8 @@ class SVMClassifier:
 # 客户端训练流程
 def svm_train():
     X_train, X_test, y_train, y_test, dim, label_num = split_data()
-    # assert label_num == args.label_num
+    # print(f'label_num,{label_num}') # 这个相当于在加载数据时看一下 label的个数
+    assert label_num == args.label_num # 如果希望每轮按照输入的label_num设定分组数 则放开这个
     model = SVMClassifier(label_num=label_num, dim=dim)
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

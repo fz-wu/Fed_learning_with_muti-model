@@ -35,7 +35,7 @@ class CNNModel():
     
     def __init__(self, learning_rate=0.001, iterations=10, num_classes=10):
         # Use CIFAR-10 dataset for data loading
-        self.model = CNN(input_channels=3, num_classes=10)  # CIFAR-10 has 3 channels, 10 classes
+        self.model = CNN(input_channels=3, num_classes=num_classes) 
         self.learning_rate = learning_rate
         self.epochs = iterations
         self.optimizer = optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9)

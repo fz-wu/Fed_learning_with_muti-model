@@ -84,7 +84,7 @@ def load_csv(filepath, minmax=None, standardize=True, bias_term=True):
 
 # 数据集划分函数
 def split_data(test_size=0.3):
-    dataset_path = get_dataset_path()+'.csv'
+    dataset_path = get_dataset_path()
     X, y = load_csv(dataset_path)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=None)
     return X_train, X_test, y_train, y_test, X.shape[1], len(np.unique(y))

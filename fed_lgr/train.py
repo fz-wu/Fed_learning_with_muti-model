@@ -57,8 +57,8 @@ class LogisticRegressionModel:
 def lgr_train():
     # 加载并划分数据
     X_train, X_test, y_train, y_test, dim, label_num = split_data()
-    print(f'label_num,{label_num}')
-    # assert label_num == args.label_num
+    # print(f'label_num,{label_num}') # 这个相当于在加载数据时看一下 label的个数
+    assert label_num == args.label_num # 如果希望每轮按照输入的label_num设定分组数 则放开这个
     X_train = (X_train - X_train.mean(axis=0)) / (X_train.std(axis=0) + 1e-8)
     X_test = (X_test - X_test.mean(axis=0)) / (X_test.std(axis=0) + 1e-8)
 
