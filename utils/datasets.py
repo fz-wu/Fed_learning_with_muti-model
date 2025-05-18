@@ -4,7 +4,7 @@ from utils.options import args_parser
 import pickle
 import hashlib
 import datetime
-import torch
+# import torch
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 import numpy as np
@@ -23,14 +23,23 @@ def load_datasets(dataset_path):
 
 def get_dataset_path():  
     args = args_parser()
-    # datasets = os.path.join(os.path.dirname('fed_lr'), 'traindata.csv')
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    print(base_dir)
-    print(args.dataset)
     datasets_path = os.path.join(base_dir, '../datasets/', args.dataset)
     datasets_path = os.path.abspath(datasets_path)
     # print(datasets_path)
     return datasets_path
+
+def get_log_path():
+    args = args_parser()
+    log_name = args.model
+    today = datetime.date.today()
+    now_time = datetime.datetime.now().strftime("%H-%M-%S")
+    date4hash = datetime.datetime.now()
+    hash_object = hashlib.md5(str(date4hash).encode())
+    hash_str = str(hash_object.hexdigest()[:6])
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    log_path = os.path.join(base_dir, '../logs/', log_name + "_" + str(today) + "_" + now_time +  "_" +  hash_str +  ".log")
+    return os.path.abspath(log_path)
 
 def save_model_weights(model_weights):
     args = args_parser()

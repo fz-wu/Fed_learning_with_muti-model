@@ -2,6 +2,7 @@
 
 import socket
 import pickle
+from venv import logger
 import numpy as np
 import torch
 from utils.datasets import save_model_weights, load_lgr_datasets, get_dataset_path
@@ -70,7 +71,7 @@ def lgr_train():
 
     for round in range(args.round):
         print(f"\nRound {round + 1}")
-
+        logger.info(f"Round {round + 1}")
         # 本地训练
         weights, bias = model.fit(X_train, y_train)
         model.evaluate(X_test, y_test)
@@ -84,7 +85,7 @@ def lgr_train():
         client_socket.sendall(len(serialized).to_bytes(4, 'big'))
         client_socket.sendall(serialized)
         print("Sent weights and sample count to server.")
-
+        logger.info("Sent weights and sample count to server.")
         # 接收聚合模型
         try:
             length_data = client_socket.recv(4)
@@ -94,8 +95,10 @@ def lgr_train():
             model.weights = w_new
             model.bias = b_new
             print("Updated model from server.")
+            logger.info("Updated model from server.")
         except Exception as e:
             print(f"Error receiving updated model: {e}")
+            logger.error(f"Error receiving updated model: {e}")
             break
 
     save_model_weights((model.weights, model.bias))
